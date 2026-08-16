@@ -79,7 +79,7 @@ game that *also* imports the ESM entry.
 | BOM scalars | `innerWidth`, `innerHeight`, `outerWidth`, `outerHeight`, `screenWidth`, `screenHeight`, `devicePixelRatio` |
 | BOM objects | `screen`, `navigator`, `location`, `document`, `localStorage` |
 | Window self-references | `window`, `self`, `parent`, `top` |
-| Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
+| Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `WheelEvent`, `KeyboardEvent`, `CompositionEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
 | On-screen canvas | `globalThis.canvas` (also `document.getElementById("GameCanvas")`) |
 
 ## Mapping to `migo.*`
@@ -95,6 +95,11 @@ game that *also* imports the ESM entry.
 | `new XMLHttpRequest()` | `migo.request()` |
 | `new WebSocket(url)` | `migo.connectSocket()` |
 | `addEventListener('touchstart' …)` on `window`, `document`, `canvas` | `migo.onTouchStart` / `onTouchMove` / `onTouchEnd` / `onTouchCancel` |
+| `addEventListener('mousedown' / 'mousemove' / 'mouseup' / 'click')` on `window`, `document`, `canvas` | `migo.onMouseDown` / `onMouseMove` / `onMouseUp`, synthesized as W3C touch-compatibility mouse events (suppressed when the paired touch called `preventDefault()`) |
+| `addEventListener('wheel')` on `window`, `document`, `canvas` | `migo.onWheel` |
+| `addEventListener('keydown' / 'keyup')` on `window`, `document` | `migo.onKeyDown` / `migo.onKeyUp` |
+| `addEventListener('compositionstart' / 'compositionupdate' / 'compositionend')` on `window`, `document` | `migo.onCompositionStart` / `onCompositionUpdate` / `onCompositionEnd` (IME) |
+| `document.hidden` / `addEventListener('visibilitychange')` | `migo.onShow` / `migo.onHide` |
 | `navigator.getGamepads()` | `migo.getGamepads()` — forwarded directly, so the returned pads keep their identity between frames |
 | `addEventListener('gamepadconnected' / 'gamepaddisconnected')` on `window` | `migo.onGamepadConnected` / `migo.onGamepadDisconnected` |
 
@@ -129,7 +134,7 @@ src/
   document.js       document object (createElement, getElementById, …)
   element.js        Node / Element / HTMLElement and tag-specific subclasses
   event-target.js   EventTarget base class
-  events.js         Event / TouchEvent / MouseEvent / DeviceMotionEvent
+  events.js         Event / TouchEvent / MouseEvent / WheelEvent / KeyboardEvent / CompositionEvent / DeviceMotionEvent
   image.js          Image() constructor → migo.createImage
   canvas.js         Canvas() constructor → migo.createCanvas
   audio.js          Audio() constructor → migo.createInnerAudioContext
@@ -137,25 +142,38 @@ src/
   xhr.js            XMLHttpRequest on top of migo.request
   websocket.js      WebSocket on top of migo.connectSocket
   file-reader.js    FileReader simple impl
+  intl.js           minimal Intl polyfill (published only when globalThis.Intl is absent)
 scripts/
   build-bundle.mjs  esbuild → dist/migo-web-adapter.bundle.js (IIFE; for prelude injection)
 tests/
-  adapter.test.mjs  Node simulation against a fake migo runtime
-  bundle.test.mjs   IIFE bundle smoke-tested in a vm.Context
+  adapter.test.mjs             Node simulation against a fake migo runtime
+  gamepad.test.mjs             W3C Gamepad API against the REAL runtime transport (fetched from minigame-labs/migo at test time)
+  bundle.test.mjs              IIFE bundle smoke-tested in a vm.Context
+  pointer-compat.test.mjs      touch + W3C compatibility-mouse event forwarding
+  keyboard-events.test.mjs     physical keyboard -> DOM keydown/keyup forwarding
+  composition-events.test.mjs  IME composition -> DOM compositionstart/update/end forwarding
+  visibility-events.test.mjs   app lifecycle -> DOM Page Visibility (document.hidden, visibilitychange)
 ```
 
 ## Running tests
 
 ```sh
 node tests/adapter.test.mjs
+node tests/gamepad.test.mjs
 node tests/bundle.test.mjs
-# or
-npm test                 # runs both
-npm run build && npm test  # rebuild bundle then test
+node tests/pointer-compat.test.mjs
+node tests/keyboard-events.test.mjs
+node tests/composition-events.test.mjs
+node tests/visibility-events.test.mjs
+# or, all seven at once — `npm test` also rebuilds dist/migo-web-adapter.bundle.js
+# first via the `pretest` script
+npm test
 ```
 
-The ESM test stubs `globalThis.migo` with a fake runtime, imports the adapter,
-and asserts BOM/DOM/event/network behavior end-to-end. The bundle test
+`adapter.test.mjs` stubs `globalThis.migo` with a fake runtime, imports the
+adapter, and asserts BOM/DOM/event/network behavior end-to-end; the other ESM
+tests each drive one behavior area (gamepad, pointer/mouse compatibility,
+keyboard, IME composition, page visibility) the same way. `bundle.test.mjs`
 re-runs a focused subset against `dist/migo-web-adapter.bundle.js` inside a
 `vm.Context` to confirm the IIFE injects the same surface.
 
