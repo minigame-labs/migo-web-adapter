@@ -6,7 +6,7 @@
 //
 //   import "@minigame-labs/migo-web-adapter";          // ESM
 //   // or, in CommonJS / require-style:
-//   require("./adapter/src/index.js");
+//   require("@minigame-labs/migo-web-adapter");
 //
 // One-shot: idempotent on re-entry.
 
