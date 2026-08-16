@@ -5,7 +5,7 @@
 
 export default function Canvas() {
   if (typeof migo.createCanvas !== "function") {
-    throw new Error("[migo-adapter] migo.createCanvas is not available");
+    throw new Error("[migo-web-adapter] migo.createCanvas is not available");
   }
   const c = migo.createCanvas();
   // Engines may want addEventListener on the canvas (touch input). Forward

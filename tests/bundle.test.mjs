@@ -1,4 +1,4 @@
-// Behavioral check that dist/migo-adapter.bundle.js, when evaluated as a
+// Behavioral check that dist/migo-web-adapter.bundle.js, when evaluated as a
 // plain script (no module loader, no `import`), wires up the same BOM/DOM
 // surface as the ESM entry. This is the contract the migo runtime relies on
 // when injecting the bundle as a boot prelude.
@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const bundlePath = resolve(__dirname, "../dist/migo-adapter.bundle.js");
+const bundlePath = resolve(__dirname, "../dist/migo-web-adapter.bundle.js");
 const bundleSrc = readFileSync(bundlePath, "utf8");
 
 // Build a minimal fake migo on a fresh context. Mirrors the runtime contract
@@ -119,6 +119,6 @@ assert.equal(sandbox.document.readyState, "complete", "bundle readyState settles
 sandbox.innerWidth = 9999; // user override before re-run
 vm.runInContext(bundleSrc, sandbox, { filename: bundlePath });
 assert.equal(sandbox.innerWidth, 9999, "second eval is a no-op (sentinel honored)");
-assert.equal(sandbox.__migoAdapterInjected, true);
+assert.equal(sandbox.__migoWebAdapterInjected, true);
 
 console.log("BUNDLE TEST PASSED");

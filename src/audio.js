@@ -26,7 +26,7 @@ export default class Audio extends EventTarget {
   constructor(src) {
     super();
     if (typeof migo.createInnerAudioContext !== "function") {
-      throw new Error("[migo-adapter] migo.createInnerAudioContext is not available");
+      throw new Error("[migo-web-adapter] migo.createInnerAudioContext is not available");
     }
     this._ctx = migo.createInnerAudioContext();
     this._readyState = 0; // 0 = HAVE_NOTHING

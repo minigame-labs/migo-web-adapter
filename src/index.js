@@ -1,10 +1,10 @@
-// migo-adapter entry point. Layers a browser-style BOM/DOM surface on top of
+// migo-web-adapter entry point. Layers a browser-style BOM/DOM surface on top of
 // the migo runtime so that engines built for browser-like environments
 // (Cocos Creator, Egret, Laya, Pixi, raw WebGL) can run unchanged.
 //
 // Usage (game side, before the engine boots):
 //
-//   import "@minigame-labs/migo-adapter";          // ESM
+//   import "@minigame-labs/migo-web-adapter";          // ESM
 //   // or, in CommonJS / require-style:
 //   require("./adapter/src/index.js");
 //
@@ -28,8 +28,8 @@ import WebSocket from "./websocket.js";
 import FileReader from "./file-reader.js";
 import Intl from "./intl.js";
 
-if (!globalThis.__migoAdapterInjected) {
-  globalThis.__migoAdapterInjected = true;
+if (!globalThis.__migoWebAdapterInjected) {
+  globalThis.__migoWebAdapterInjected = true;
 
   // 1. Global on-screen canvas. Engines do `document.getElementById('GameCanvas')`
   //    or grab `window.canvas`. Create once, reuse.
@@ -268,7 +268,7 @@ if (!globalThis.__migoAdapterInjected) {
   //    top-level code has registered its listeners. readyState walks
   //    "loading" → "interactive" (DOMContentLoaded) → "complete" (load),
   //    matching the sequence a deferred script observes on the web. Fires once
-  //    (the whole block is guarded by `__migoAdapterInjected`).
+  //    (the whole block is guarded by `__migoWebAdapterInjected`).
   const _setReadyState = (state) => {
     document.readyState = state;
     const ev = { type: "readystatechange", target: document, currentTarget: document };

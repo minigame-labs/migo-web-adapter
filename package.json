@@ -1,5 +1,5 @@
 {
-  "name": "@minigame-labs/migo-adapter",
+  "name": "@minigame-labs/migo-web-adapter",
   "version": "0.1.0",
   "description": "Browser-style BOM/DOM adapter layered on top of the migo mini-game runtime. Layered on top of `migo.*` APIs.",
   "type": "module",

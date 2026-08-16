@@ -1,4 +1,4 @@
-# migo-adapter
+# migo-web-adapter
 
 A browser-style BOM/DOM adapter layered on top of the [migo](https://github.com/minigame-labs/migo) mini-game runtime. Lets games written for browser-like environments (Cocos Creator, Egret, Laya, Pixi, raw WebGL) run on migo unchanged, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
 
@@ -18,12 +18,12 @@ The adapter is plain ESM source — no build step required.
 
 ```js
 // game entry, BEFORE the engine boots
-import "@minigame-labs/migo-adapter";
+import "@minigame-labs/migo-web-adapter";
 // or, with a require/AMD loader:
 require("./src/index.js");
 ```
 
-The adapter detects re-entry via `globalThis.__migoAdapterInjected` and is safe to import twice.
+The adapter detects re-entry via `globalThis.__migoWebAdapterInjected` and is safe to import twice.
 
 ### Zero-touch testing via runtime boot prelude
 
@@ -36,16 +36,16 @@ Build the bundle:
 
 ```sh
 npm run build
-# → dist/migo-adapter.bundle.js
+# → dist/migo-web-adapter.bundle.js
 ```
 
 Wire it into the runtime (Rust side, e.g. desktop launcher or Android JNI
 bootstrap):
 
 ```rust
-let bundle = std::fs::read_to_string("path/to/migo-adapter.bundle.js")?;
+let bundle = std::fs::read_to_string("path/to/migo-web-adapter.bundle.js")?;
 let init = InitOptions::new()
-    .with_prelude_script("<migo-adapter>", bundle)
+    .with_prelude_script("<migo-web-adapter>", bundle)
     // ... other options
     ;
 // then EvaluateModule the game's entry as usual
@@ -54,20 +54,20 @@ let init = InitOptions::new()
 On Android, configure it via `RuntimeConfig.Builder`:
 
 ```java
-String bundle = readAssetAsString(context, "migo-adapter.bundle.js");
+String bundle = readAssetAsString(context, "migo-web-adapter.bundle.js");
 RuntimeConfig config = new RuntimeConfig.Builder(context)
-        .addPreludeScript("<migo-adapter>", bundle)
+        .addPreludeScript("<migo-web-adapter>", bundle)
         .build();
 ```
 
-Drop `migo-adapter.bundle.js` into your app's `assets/` folder so the
+Drop `migo-web-adapter.bundle.js` into your app's `assets/` folder so the
 host app can read it once at launch and pass the source to the builder.
 
 The prelude runs in the global scope before every `EvaluateModule`, so the
 game sees `window.innerWidth`, `document.createElement`, `Image`,
 `XMLHttpRequest`, etc. already wired up. Multiple `with_prelude_script`
 calls accumulate and execute in declaration order; the same
-`__migoAdapterInjected` sentinel makes the bundle safe to combine with a
+`__migoWebAdapterInjected` sentinel makes the bundle safe to combine with a
 game that *also* imports the ESM entry.
 
 ## What gets exposed on `globalThis`
@@ -136,7 +136,7 @@ src/
   websocket.js      WebSocket on top of migo.connectSocket
   file-reader.js    FileReader simple impl
 scripts/
-  build-bundle.mjs  esbuild → dist/migo-adapter.bundle.js (IIFE; for prelude injection)
+  build-bundle.mjs  esbuild → dist/migo-web-adapter.bundle.js (IIFE; for prelude injection)
 tests/
   adapter.test.mjs  Node simulation against a fake migo runtime
   bundle.test.mjs   IIFE bundle smoke-tested in a vm.Context
@@ -154,7 +154,7 @@ npm run build && npm test  # rebuild bundle then test
 
 The ESM test stubs `globalThis.migo` with a fake runtime, imports the adapter,
 and asserts BOM/DOM/event/network behavior end-to-end. The bundle test
-re-runs a focused subset against `dist/migo-adapter.bundle.js` inside a
+re-runs a focused subset against `dist/migo-web-adapter.bundle.js` inside a
 `vm.Context` to confirm the IIFE injects the same surface.
 
 ## License

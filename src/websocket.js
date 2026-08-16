@@ -9,7 +9,7 @@ export default class WebSocket extends EventTarget {
   constructor(url, protocols) {
     super();
     if (typeof migo.connectSocket !== "function") {
-      throw new Error("[migo-adapter] migo.connectSocket is not available");
+      throw new Error("[migo-web-adapter] migo.connectSocket is not available");
     }
     this.url = url;
     this.protocol = Array.isArray(protocols) ? protocols.join(",") : (protocols || "");

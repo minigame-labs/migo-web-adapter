@@ -208,6 +208,6 @@ assert.equal(globalThis.top, globalThis);
 
 // 13. Idempotent re-import
 await import("../src/index.js");
-assert.equal(globalThis.__migoAdapterInjected, true, "adapter is idempotent");
+assert.equal(globalThis.__migoWebAdapterInjected, true, "adapter is idempotent");
 
 console.log("ALL ASSERTIONS PASSED (13 sections)");

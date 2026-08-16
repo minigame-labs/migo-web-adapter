@@ -4,7 +4,7 @@
 
 export default function Image() {
   if (typeof migo.createImage !== "function") {
-    throw new Error("[migo-adapter] migo.createImage is not available");
+    throw new Error("[migo-web-adapter] migo.createImage is not available");
   }
   return migo.createImage();
 }

@@ -22,7 +22,7 @@ function maybeLoadScript(node) {
     const src = String(node.src);
     try {
       if (/^(https?:)?\/\//i.test(src) || /^data:/i.test(src)) {
-        console.warn("[migo-adapter] refusing to load non-local script:", src);
+        console.warn("[migo-web-adapter] refusing to load non-local script:", src);
         if (typeof node.onerror === "function") node.onerror(new Error("non-local script blocked"));
         node.dispatchEvent && node.dispatchEvent({ type: "error" });
         return;
@@ -39,7 +39,7 @@ function maybeLoadScript(node) {
       if (typeof node.onload === "function") node.onload();
       node.dispatchEvent && node.dispatchEvent({ type: "load" });
     } catch (e) {
-      console.error("[migo-adapter] local script load failed:", src, e);
+      console.error("[migo-web-adapter] local script load failed:", src, e);
       if (typeof node.onerror === "function") node.onerror(e);
       node.dispatchEvent && node.dispatchEvent({ type: "error" });
     }

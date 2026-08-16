@@ -1,7 +1,7 @@
 // Bundle the ESM adapter into a single IIFE file that the migo runtime can
 // inject as a boot prelude script (no module loader needed at runtime).
 //
-// The adapter is idempotent (guarded by `globalThis.__migoAdapterInjected`),
+// The adapter is idempotent (guarded by `globalThis.__migoWebAdapterInjected`),
 // so the bundle is safe to evaluate even if the game also `import`s the
 // ESM entry point afterwards.
 
@@ -22,13 +22,13 @@ await build({
   // what we want.
   platform: "neutral",
   target: ["es2020"],
-  outfile: resolve(root, "dist/migo-adapter.bundle.js"),
+  outfile: resolve(root, "dist/migo-web-adapter.bundle.js"),
   sourcemap: false,
   legalComments: "none",
   // Banner makes the output self-describing if a developer looks at it.
   banner: {
-    js: "/* @minigame-labs/migo-adapter — IIFE bundle. Source: adapter/src/index.js */",
+    js: "/* @minigame-labs/migo-web-adapter — IIFE bundle. Source: src/index.js */",
   },
 });
 
-console.log("built dist/migo-adapter.bundle.js");
+console.log("built dist/migo-web-adapter.bundle.js");

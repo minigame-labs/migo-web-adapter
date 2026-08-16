@@ -47,7 +47,7 @@ export default class XMLHttpRequest extends EventTarget {
 
   send(body) {
     if (typeof migo.request !== "function") {
-      throw new Error("[migo-adapter] migo.request is not available");
+      throw new Error("[migo-web-adapter] migo.request is not available");
     }
     const dataType = this.responseType === "json" ? "json" : undefined;
     // Use the host's arraybuffer mode when caller wants binary; otherwise text.
