@@ -6,13 +6,37 @@
 // hand-written fake would happily agree with a broken adapter about all three.
 // Importing the real module means this test fails if either side drifts.
 //
+// This adapter lives in its own repo, separate from the engine, so "import it
+// directly" means fetching it from minigame-labs/migo at test time rather
+// than a relative path within a shared tree. MIGO_GAMEPAD_REF picks the ref
+// (default: master); failing closed on a fetch error is the point, the same
+// way migo-examples' own namespace contract test does -- a skipped check here
+// is exactly how a real drift would go unnoticed.
+//
 // Run with `node tests/gamepad.test.mjs` from this dir or via npm test.
 
 import assert from "node:assert/strict";
+import { writeFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-const runtime = await import(
-  "../../engine/crates/runtime-v8/src/input/04_gamepad.js"
-);
+const REF = process.env.MIGO_GAMEPAD_REF || "master";
+const SOURCE_URL = `https://raw.githubusercontent.com/minigame-labs/migo/${REF}/engine/crates/runtime-v8/src/input/04_gamepad.js`;
+
+const res = await fetch(SOURCE_URL);
+if (!res.ok) {
+  throw new Error(
+    `could not fetch the real gamepad transport source for ref '${REF}' ` +
+    `from ${SOURCE_URL}: HTTP ${res.status}`
+  );
+}
+const source = await res.text();
+
+const tmpDir = await mkdtemp(join(tmpdir(), "migo-gamepad-test-"));
+const tmpFile = join(tmpDir, "04_gamepad.js");
+await writeFile(tmpFile, source, "utf8");
+const runtime = await import(`file://${tmpFile}`);
+await rm(tmpDir, { recursive: true, force: true });
 
 // ---- Fake migo carrying the real gamepad transport ------------------------
 // Only the public `migo` names are wired. The `_internalTrigger*` functions are

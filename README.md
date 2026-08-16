@@ -1,8 +1,8 @@
 # migo-adapter
 
-A browser-style BOM/DOM adapter layered on top of the [migo](../) mini-game runtime. Lets games written for browser-like environments (Cocos Creator, Egret, Laya, Pixi, raw WebGL) run on migo unchanged, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
+A browser-style BOM/DOM adapter layered on top of the [migo](https://github.com/minigame-labs/migo) mini-game runtime. Lets games written for browser-like environments (Cocos Creator, Egret, Laya, Pixi, raw WebGL) run on migo unchanged, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
 
-The migo runtime intentionally ships **no BOM/DOM** — it offers only `migo.*` (the wx-aligned API surface) plus standard JavaScript. Browser-style globals are this adapter's job.
+The migo runtime intentionally ships **no BOM/DOM** — it offers only `migo.*` plus standard JavaScript. Browser-style globals are this adapter's job. If your content is wx-shaped instead (calls `wx.*` directly), see [`migo-wx-adapter`](https://github.com/minigame-labs/migo-wx-adapter) — the two compose freely, since they touch disjoint globals.
 
 ## When to use
 
@@ -20,7 +20,7 @@ The adapter is plain ESM source — no build step required.
 // game entry, BEFORE the engine boots
 import "@minigame-labs/migo-adapter";
 // or, with a require/AMD loader:
-require("./adapter/src/index.js");
+require("./src/index.js");
 ```
 
 The adapter detects re-entry via `globalThis.__migoAdapterInjected` and is safe to import twice.
@@ -35,9 +35,8 @@ once and feed it to the runtime via `InitOptions::with_prelude_script`.
 Build the bundle:
 
 ```sh
-cd adapter
 npm run build
-# → adapter/dist/migo-adapter.bundle.js
+# → dist/migo-adapter.bundle.js
 ```
 
 Wire it into the runtime (Rust side, e.g. desktop launcher or Android JNI
@@ -146,7 +145,6 @@ tests/
 ## Running tests
 
 ```sh
-cd adapter
 node tests/adapter.test.mjs
 node tests/bundle.test.mjs
 # or
