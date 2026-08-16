@@ -1,5 +1,7 @@
 # migo-web-adapter
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 A browser-style BOM/DOM adapter layered on top of the [migo](https://github.com/minigame-labs/migo) mini-game runtime. Lets games written for browser-like environments (Cocos Creator, Egret, Laya, Pixi, raw WebGL) run on migo unchanged, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
 
 The migo runtime intentionally ships **no BOM/DOM** — it offers only `migo.*` plus standard JavaScript. Browser-style globals are this adapter's job. If your content is wx-shaped instead (calls `wx.*` directly), see [`migo-wx-adapter`](https://github.com/minigame-labs/migo-wx-adapter) — the two compose freely, since they touch disjoint globals.
