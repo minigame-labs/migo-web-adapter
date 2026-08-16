@@ -69,7 +69,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | BOM 标量 | `innerWidth`、`innerHeight`、`outerWidth`、`outerHeight`、`screenWidth`、`screenHeight`、`devicePixelRatio` |
 | BOM 对象 | `screen`、`navigator`、`location`、`document`、`localStorage` |
 | Window 自引用 | `window`、`self`、`parent`、`top` |
-| 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
+| 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`WheelEvent`、`KeyboardEvent`、`CompositionEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
 | 屏上画布 | `globalThis.canvas`(也可通过 `document.getElementById("GameCanvas")` 获取) |
 
 ## 与 `migo.*` 的映射关系
@@ -85,6 +85,11 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | `new XMLHttpRequest()` | `migo.request()` |
 | `new WebSocket(url)` | `migo.connectSocket()` |
 | 在 `window`、`document`、`canvas` 上 `addEventListener('touchstart' …)` | `migo.onTouchStart` / `onTouchMove` / `onTouchEnd` / `onTouchCancel` |
+| 在 `window`、`document`、`canvas` 上 `addEventListener('mousedown' / 'mousemove' / 'mouseup' / 'click')` | `migo.onMouseDown` / `onMouseMove` / `onMouseUp`，合成为 W3C 触摸兼容鼠标事件（若配对的触摸调用了 `preventDefault()` 则会被抑制） |
+| 在 `window`、`document`、`canvas` 上 `addEventListener('wheel')` | `migo.onWheel` |
+| 在 `window`、`document` 上 `addEventListener('keydown' / 'keyup')` | `migo.onKeyDown` / `migo.onKeyUp` |
+| 在 `window`、`document` 上 `addEventListener('compositionstart' / 'compositionupdate' / 'compositionend')` | `migo.onCompositionStart` / `onCompositionUpdate` / `onCompositionEnd`（IME） |
+| `document.hidden` / `addEventListener('visibilitychange')` | `migo.onShow` / `migo.onHide` |
 | `navigator.getGamepads()` | `migo.getGamepads()`——直接转发，因此返回的手柄对象在帧与帧之间保持同一身份 |
 | 在 `window` 上 `addEventListener('gamepadconnected' / 'gamepaddisconnected')` | `migo.onGamepadConnected` / `migo.onGamepadDisconnected` |
 
@@ -119,7 +124,7 @@ src/
   document.js       document 对象(createElement、getElementById 等)
   element.js        Node / Element / HTMLElement 及各标签对应的子类
   event-target.js   EventTarget 基类
-  events.js         Event / TouchEvent / MouseEvent / DeviceMotionEvent
+  events.js         Event / TouchEvent / MouseEvent / WheelEvent / KeyboardEvent / CompositionEvent / DeviceMotionEvent
   image.js          Image() 构造函数 → migo.createImage
   canvas.js         Canvas() 构造函数 → migo.createCanvas
   audio.js          Audio() 构造函数 → migo.createInnerAudioContext
@@ -127,27 +132,39 @@ src/
   xhr.js            基于 migo.request 实现的 XMLHttpRequest
   websocket.js      基于 migo.connectSocket 实现的 WebSocket
   file-reader.js    FileReader 的简单实现
+  intl.js           最小化的 Intl polyfill（仅在 globalThis.Intl 缺失时发布）
 scripts/
   build-bundle.mjs  esbuild → dist/migo-web-adapter.bundle.js (IIFE;用于前置脚本注入)
 tests/
-  adapter.test.mjs  针对一个伪造 migo 运行时的 Node 模拟测试
-  bundle.test.mjs   在 vm.Context 中对 IIFE 打包产物做冒烟测试
+  adapter.test.mjs             针对一个伪造 migo 运行时的 Node 模拟测试
+  gamepad.test.mjs             针对真实运行时传输层的 W3C Gamepad API 测试(测试时从 minigame-labs/migo 拉取)
+  bundle.test.mjs              在 vm.Context 中对 IIFE 打包产物做冒烟测试
+  pointer-compat.test.mjs      触摸 + W3C 兼容鼠标事件转发
+  keyboard-events.test.mjs     物理键盘 → DOM keydown/keyup 转发
+  composition-events.test.mjs  IME 组合输入 → DOM compositionstart/update/end 转发
+  visibility-events.test.mjs   应用生命周期 → DOM Page Visibility(document.hidden、visibilitychange)
 ```
 
 ## 运行测试
 
 ```sh
 node tests/adapter.test.mjs
+node tests/gamepad.test.mjs
 node tests/bundle.test.mjs
-# or
-npm test                 # runs both
-npm run build && npm test  # rebuild bundle then test
+node tests/pointer-compat.test.mjs
+node tests/keyboard-events.test.mjs
+node tests/composition-events.test.mjs
+node tests/visibility-events.test.mjs
+# or, all seven at once — `npm test` also rebuilds dist/migo-web-adapter.bundle.js
+# first via the `pretest` script
+npm test
 ```
 
-ESM 测试会给 `globalThis.migo` 打桩为一个伪造的运行时，引入适配层，
-并对 BOM/DOM/事件/网络行为做端到端断言。打包产物测试会在
-`vm.Context` 中针对 `dist/migo-web-adapter.bundle.js` 重跑一个精简子集，
-以确认这份 IIFE 注入的能力面与 ESM 版本一致。
+`adapter.test.mjs` 给 `globalThis.migo` 打桩为一个伪造的运行时，引入适配层，
+并对 BOM/DOM/事件/网络行为做端到端断言;其余的 ESM 测试各自针对一个行为领域
+(手柄、指针/鼠标兼容、键盘、IME 组合输入、页面可见性)做同样的事情。
+`bundle.test.mjs` 会在 `vm.Context` 中针对 `dist/migo-web-adapter.bundle.js`
+重跑一个精简子集，以确认这份 IIFE 注入的能力面与 ESM 版本一致。
 
 ## 许可证
 
