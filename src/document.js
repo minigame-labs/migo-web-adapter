@@ -12,6 +12,15 @@ import EventTarget from "./event-target.js";
 
 const _docTarget = new EventTarget();
 
+// The page's element tree: <html> holding <head> and <body>. Engines measure
+// against it -- Phaser on iOS appends a 100vh probe to documentElement to read
+// the viewport height -- so it is an element, not the window.
+const head = new HTMLElement("head");
+const body = new HTMLElement("body");
+const documentElement = new HTMLElement("html");
+documentElement.appendChild(head);
+documentElement.appendChild(body);
+
 const document = {
   // Starts "loading"; index.js walks it "loading" → "interactive" (fires
   // DOMContentLoaded) → "complete" (fires window `load`) on a deferred
@@ -21,7 +30,7 @@ const document = {
   onreadystatechange: null,
   visibilityState: "visible",
   hidden: false,
-  documentElement: null, // patched at the end (circular: window → document)
+  documentElement,
   location,
   ontouchstart: null,
   ontouchmove: null,
@@ -29,8 +38,8 @@ const document = {
   ontouchcancel: null,
   style: {},
 
-  head: new HTMLElement("head"),
-  body: new HTMLElement("body"),
+  head,
+  body,
 
   // Set true by index.js when the `load` event fires; gates display-canvas
   // routing below so it only applies to canvases created during engine boot.
