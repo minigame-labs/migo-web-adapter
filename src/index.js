@@ -51,6 +51,12 @@ if (!globalThis.__migoWebAdapterInjected) {
   const _emit = (ev) => {
     ev.target = canvas;
     canvas.dispatchEvent && canvas.dispatchEvent(ev);
+    // Bubbling, as a browser does: the canvas's ancestors -- or, for a canvas
+    // no one attached, <body> and <html>, where the page's hit test lands --
+    // then document and window.
+    for (let node = canvas.parentNode || document.body; node; node = node.parentNode) {
+      node.dispatchEvent(ev);
+    }
     document.dispatchEvent(ev);
     _winTarget.dispatchEvent(ev);
     const sink = document["on" + ev.type];
@@ -197,10 +203,7 @@ if (!globalThis.__migoWebAdapterInjected) {
     if (typeof sink === "function") try { sink(event); } catch {}
   });
 
-  // 3. Patch the document → window self-reference.
-  document.documentElement = globalThis;
-
-  // 4. Publish the BOM/DOM surface on globalThis. Properties go through
+  // 3. Publish the BOM/DOM surface on globalThis. Properties go through
   //    Object.defineProperty so that subsequent assignment by engine code
   //    (e.g. `window.innerWidth = ...`) works (writable: true).
   const surface = {
@@ -246,20 +249,20 @@ if (!globalThis.__migoWebAdapterInjected) {
     }
   }
 
-  // 5. Window self-references that engines depend on.
+  // 4. Window self-references that engines depend on.
   if (!globalThis.window) globalThis.window = globalThis;
   if (!globalThis.self) globalThis.self = globalThis;
   if (!globalThis.parent) globalThis.parent = globalThis;
   if (!globalThis.top) globalThis.top = globalThis;
 
-  // 6. addEventListener on the window: route to document.
+  // 5. addEventListener on the window: route to document.
   if (typeof globalThis.addEventListener !== "function") {
     globalThis.addEventListener = (t, l) => document.addEventListener(t, l);
     globalThis.removeEventListener = (t, l) => document.removeEventListener(t, l);
     globalThis.dispatchEvent = (e) => document.dispatchEvent(e);
   }
 
-  // 7. DOM lifecycle events. Browser-targeted engines commonly boot from
+  // 6. DOM lifecycle events. Browser-targeted engines commonly boot from
   //    `window.addEventListener('load', ...)` or `DOMContentLoaded` (e.g.
   //    Phaser's game entry is `window.addEventListener('load', () => new
   //    Phaser.Game(cfg))`). A real browser fires these AFTER a `<script defer>`

@@ -155,6 +155,25 @@ _touchStart && _touchStart({ touches: [{ clientX: 1, clientY: 2 }] });
 assert.equal(docHits, 1, "host touchstart routes to document listeners");
 assert.ok(globalThis.canvas, "global canvas is set");
 
+// 7b. documentElement is the <html> element, not the window: Phaser on iOS
+//     appends a 100vh probe to it and reads the probe's height as the viewport.
+const html = globalThis.document.documentElement;
+assert.equal(html.tagName, "HTML", "documentElement is <html>");
+assert.equal(globalThis.document.body.parentNode, html, "<body> is a child of <html>");
+const probe = globalThis.document.createElement("div");
+probe.setAttribute("style", "position: fixed; height: 100vh; width: 0; top: 0");
+html.appendChild(probe);
+assert.equal(probe.offsetHeight, globalThis.innerHeight, "a 100vh probe measures the viewport");
+html.removeChild(probe);
+// A touch bubbles through <body> and <html> before document, as in a browser:
+// a listener on documentElement heard touches when it was the window.
+const heard = [];
+html.addEventListener("touchstart", () => heard.push("html"));
+globalThis.document.body.addEventListener("touchstart", () => heard.push("body"));
+globalThis.document.addEventListener("touchstart", () => heard.push("document"));
+_touchStart && _touchStart({ touches: [{ clientX: 1, clientY: 2 }] });
+assert.deepEqual(heard, ["body", "html", "document"], "touch bubbles body -> html -> document");
+
 // 8. localStorage
 globalThis.localStorage.setItem("k", "v");
 assert.equal(globalThis.localStorage.getItem("k"), "v");
