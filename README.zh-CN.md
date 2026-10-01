@@ -71,6 +71,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | Window 自引用 | `window`、`self`、`parent`、`top` |
 | 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`WheelEvent`、`KeyboardEvent`、`CompositionEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
 | 屏上画布 | `globalThis.canvas`(也可通过 `document.getElementById("GameCanvas")` 获取) |
+| DOM 触摸 | `Touch`(`identifier`、`target`、`clientX/Y`、`pageX/Y`、`screenX/Y`、`radiusX/Y`、`rotationAngle`、`force`);`TouchEvent` 的 `touches` / `targetTouches` / `changedTouches` 带 `item(i)` |
 | Migo 的 V8 没有的标准全局 | `atob`、`btoa`(HTML 标准 base64,输入非法时抛 `InvalidCharacterError`)、`DOMException`(name、message、旧式 `code`)。宿主自带时不覆盖 |
 
 ## 与 `migo.*` 的映射关系
@@ -93,6 +94,24 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | `document.hidden` / `addEventListener('visibilitychange')` | `migo.onShow` / `migo.onHide` |
 | `navigator.getGamepads()` | `migo.getGamepads()`——直接转发，因此返回的手柄对象在帧与帧之间保持同一身份 |
 | 在 `window` 上 `addEventListener('gamepadconnected' / 'gamepaddisconnected')` | `migo.onGamepadConnected` / `migo.onGamepadDisconnected` |
+
+## 哪个画布会被显示
+
+Migo 只呈现一个画布:`globalThis.canvas`(也可用 `document.getElementById("GameCanvas")` 取到),即运行时创建的第一个画布。画在别的画布上的内容只是一块没人看见的离屏缓冲;浏览器教程里的 `document.body.appendChild(canvas)` 并不会告诉引擎这一点。
+
+- **文档就绪之后才运行的代码**(DOMContentLoaded 及以后:Phaser 在这时启动,`load` 回调里的代码也是):引擎用 `document.createElement('canvas')` 创建的第一个画布,只要屏幕画布还没被占用,*就是*屏幕画布。默认配置的 Phaser 游戏直接可用。
+- **脚本加载期间运行的代码**(顶层):此时创建的画布被当作特性探测画布,是离屏的。请把 Migo 显示的那块画布传给引擎,每个引擎一行,[conformance 的 `engines/` 套件](https://github.com/minigame-labs/migo-conformance/tree/master/engines)跑的正是这些写法:
+
+```js
+const canvas = globalThis.canvas;                                  // 被呈现的那块
+new Phaser.Game({ type: Phaser.WEBGL, canvas, width: canvas.width, height: canvas.height, scene });
+new PIXI.Application({ view: canvas, width: canvas.width, height: canvas.height });
+new THREE.WebGLRenderer({ canvas });
+new BABYLON.Engine(canvas, true);
+new pc.Application(canvas, { graphicsDeviceOptions: { deviceTypes: ['webgl2'] } });
+```
+
+触摸会以 DOM `TouchEvent` 的形式送达画布、`document` 和 `window`,其中 `Touch` 对象带有 `target`(画布)、`screenX/Y` 和接触椭圆;Phaser 场景级的 `input.on('pointerdown')` 依赖这个 `target`。
 
 ## BOM 语义
 

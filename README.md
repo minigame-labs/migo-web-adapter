@@ -81,6 +81,7 @@ game that *also* imports the ESM entry.
 | Window self-references | `window`, `self`, `parent`, `top` |
 | Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `WheelEvent`, `KeyboardEvent`, `CompositionEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
 | On-screen canvas | `globalThis.canvas` (also `document.getElementById("GameCanvas")`) |
+| DOM touch | `Touch` (`identifier`, `target`, `clientX/Y`, `pageX/Y`, `screenX/Y`, `radiusX/Y`, `rotationAngle`, `force`); `TouchEvent.touches` / `targetTouches` / `changedTouches` are lists with `item(i)` |
 | Standard globals Migo's V8 lacks | `atob`, `btoa` (HTML Standard base64, `InvalidCharacterError` on bad input), `DOMException` (name, message, legacy `code`). Published only when the host has none of its own |
 
 ## Mapping to `migo.*`
@@ -103,6 +104,24 @@ game that *also* imports the ESM entry.
 | `document.hidden` / `addEventListener('visibilitychange')` | `migo.onShow` / `migo.onHide` |
 | `navigator.getGamepads()` | `migo.getGamepads()` — forwarded directly, so the returned pads keep their identity between frames |
 | `addEventListener('gamepadconnected' / 'gamepaddisconnected')` on `window` | `migo.onGamepadConnected` / `migo.onGamepadDisconnected` |
+
+## Which canvas is shown
+
+Migo presents exactly one canvas: `globalThis.canvas` (also `document.getElementById("GameCanvas")`), the first canvas the runtime creates. Anything drawn on another canvas is an offscreen buffer nobody sees, which is what a browser tutorial's `document.body.appendChild(canvas)` does not tell the engine.
+
+- **Code that runs once the document is ready** (DOMContentLoaded or later: Phaser boots there, and so does anything in a `load` handler): the first canvas the engine creates with `document.createElement('canvas')`, while the onscreen one is still unclaimed, *is* the onscreen canvas. A default Phaser game just works.
+- **Code that runs while the script loads** (top level): canvases made then are treated as feature probes and are offscreen. Pass the canvas Migo shows, which is one line per engine and is what the [conformance `engines/` suite](https://github.com/minigame-labs/migo-conformance/tree/master/engines) runs:
+
+```js
+const canvas = globalThis.canvas;                                  // the one that is presented
+new Phaser.Game({ type: Phaser.WEBGL, canvas, width: canvas.width, height: canvas.height, scene });
+new PIXI.Application({ view: canvas, width: canvas.width, height: canvas.height });
+new THREE.WebGLRenderer({ canvas });
+new BABYLON.Engine(canvas, true);
+new pc.Application(canvas, { graphicsDeviceOptions: { deviceTypes: ['webgl2'] } });
+```
+
+Touches reach the canvas, `document` and `window` as DOM `TouchEvent`s whose `Touch` objects have a `target` (the canvas), `screenX/Y` and the contact ellipse; Phaser's scene-level `input.on('pointerdown')` depends on that `target`.
 
 ## BOM semantics
 
