@@ -29,6 +29,12 @@ import FileReader from "./file-reader.js";
 import Intl from "./intl.js";
 import DOMException from "./dom-exception.js";
 import { atob, btoa } from "./base64.js";
+import { TextEncoder, TextDecoder } from "./text-codec.js";
+import { Blob, File } from "./blob.js";
+import { AbortController, AbortSignal } from "./abort.js";
+import { Headers, Request, Response, fetch } from "./fetch.js";
+import { installObjectURLs } from "./blob-url.js";
+import { wrapCreateImageBitmap } from "./image.js";
 import { Touch, touchList } from "./touch.js";
 import { createPointerBridge, installPointerCapture, pointerCaptureMethods } from "./pointer.js";
 
@@ -268,6 +274,19 @@ if (!globalThis.__migoWebAdapterInjected) {
   if (typeof globalThis.DOMException !== "function") surface.DOMException = DOMException;
   if (typeof globalThis.atob !== "function") surface.atob = atob;
   if (typeof globalThis.btoa !== "function") surface.btoa = btoa;
+  // Loaders assume these: TextDecoder for JSON and glTF, Blob and fetch for assets, AbortController for cancelling them.
+  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch };
+  for (const name of Object.keys(standard)) {
+    if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
+  }
+  // `URL.createObjectURL` throws in the runtime's URL; Phaser 3 loads all its images through it. And `createImageBitmap`
+  // takes a Blob (Pixi: fetch -> blob -> createImageBitmap).
+  installObjectURLs(globalThis.URL);
+  if (typeof globalThis.createImageBitmap === "function" && !globalThis.createImageBitmap._migoBlobAware) {
+    const wrapped = wrapCreateImageBitmap(globalThis.createImageBitmap);
+    wrapped._migoBlobAware = true;
+    surface.createImageBitmap = wrapped;
+  }
 
   for (const key of Object.keys(surface)) {
     try {

@@ -51,7 +51,7 @@ const fakeMigo = {
   request: (opts) => {
     queueMicrotask(() => {
       if (opts.url === "fail") opts.fail && opts.fail({ errMsg: "fail" });
-      else opts.success && opts.success({ statusCode: 200, data: opts.responseType === "arraybuffer" ? new ArrayBuffer(4) : "ok" });
+      else opts.success && opts.success({ statusCode: 200, data: opts.responseType === "arraybuffer" ? new TextEncoder().encode("ok").buffer : "ok" });
     });
     return { abort: () => {} };
   },

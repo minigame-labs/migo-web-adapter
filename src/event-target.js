@@ -1,5 +1,7 @@
-// EventTarget — minimal, matches the surface games expect.
-// addEventListener / removeEventListener / dispatchEvent.
+// EventTarget — addEventListener / removeEventListener / dispatchEvent, with the parts of the options argument engines
+// use: `once` (Phaser's and three.js's one-shot listeners), `signal` (a listener that goes away with an AbortController),
+// listener objects with `handleEvent`, and `stopImmediatePropagation()` stopping the listeners after it. `capture` and
+// `passive` are accepted and ignored: events here are dispatched at the target, not through a captured path.
 // Listeners are stored in a plain map keyed by event type.
 
 export default class EventTarget {
@@ -7,17 +9,25 @@ export default class EventTarget {
     this._listeners = {};
   }
 
-  addEventListener(type, listener /* , optionsOrCapture */) {
-    if (typeof listener !== "function") return;
+  addEventListener(type, listener, options) {
+    if (typeof listener !== "function" && !(listener && typeof listener.handleEvent === "function")) return;
+    const signal = options && typeof options === "object" ? options.signal : undefined;
+    if (signal && signal.aborted) return;
     const list = this._listeners[type] || (this._listeners[type] = []);
-    if (list.indexOf(listener) === -1) list.push(listener);
+    for (let i = 0; i < list.length; i++) if (list[i].listener === listener) return;
+    const entry = { listener, once: !!(options && typeof options === "object" && options.once) };
+    list.push(entry);
+    if (signal && typeof signal.addEventListener === "function") {
+      signal.addEventListener("abort", () => this.removeEventListener(type, listener));
+    }
   }
 
   removeEventListener(type, listener) {
     const list = this._listeners[type];
     if (!list) return;
-    const i = list.indexOf(listener);
-    if (i !== -1) list.splice(i, 1);
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].listener === listener) { list.splice(i, 1); return; }
+    }
   }
 
   dispatchEvent(event) {
@@ -29,7 +39,14 @@ export default class EventTarget {
     // Iterate over a copy: a listener may add/remove during dispatch.
     const snapshot = list.slice();
     for (let i = 0; i < snapshot.length; i++) {
-      try { snapshot[i].call(this, event); } catch (e) {
+      const entry = snapshot[i];
+      // A listener removed by an earlier one in this dispatch is not called.
+      if (list.indexOf(entry) === -1) continue;
+      if (entry.once) this.removeEventListener(event.type, entry.listener);
+      try {
+        if (typeof entry.listener === "function") entry.listener.call(this, event);
+        else entry.listener.handleEvent(event);
+      } catch (e) {
         // Match browser behavior: a listener throwing must not stop others.
         // Diagnostics are also untrusted embedder code. If console.error is
         // replaced with a throwing function, that failure must not escape this
@@ -40,6 +57,7 @@ export default class EventTarget {
           // Reporting is best-effort; listener isolation is the contract.
         }
       }
+      if (event._stopImmediate) break;
     }
     return !event.defaultPrevented;
   }
