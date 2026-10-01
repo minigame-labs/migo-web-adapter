@@ -144,7 +144,7 @@ const div = globalThis.document.createElement("div");
 assert.ok(div instanceof globalThis.HTMLElement, "div instanceof HTMLElement");
 assert.equal(div.tagName, "DIV");
 div.setAttribute("data-foo", 1);
-assert.equal(div.getAttribute("data-foo"), 1);
+assert.equal(div.getAttribute("data-foo"), "1", "an attribute is a string");
 const rect = div.getBoundingClientRect();
 assert.equal(rect.width, 390); // matches current innerWidth
 
@@ -229,4 +229,5 @@ assert.equal(globalThis.top, globalThis);
 await import("../src/index.js");
 assert.equal(globalThis.__migoWebAdapterInjected, true, "adapter is idempotent");
 
+assert.equal(globalThis.document.hasFocus(), true, "a visible game has focus");
 console.log("ALL ASSERTIONS PASSED (13 sections)");

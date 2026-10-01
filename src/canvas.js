@@ -4,6 +4,7 @@
 // expose a constructor wrapper for the `new Canvas()` form.
 
 import { installPointerCapture } from "./pointer.js";
+import { ClassList } from "./class-list.js";
 
 export default function Canvas() {
   if (typeof migo.createCanvas !== "function") {
@@ -57,6 +58,9 @@ function installElementMembers(c) {
     },
     writable: true,
   });
+  define("dataset", { get() { return this._dataset || (this._dataset = {}); } });
+  define("className", { value: "", writable: true });
+  define("classList", { get() { return this._classList || (this._classList = new ClassList(this)); } });
   define("contains", { value(other) { return other === this; }, writable: true });
   define("hasAttribute", { value(name) { return typeof this.getAttribute === "function" && this.getAttribute(name) != null; }, writable: true });
   define("focus", { value() { if (globalThis.document) globalThis.document.activeElement = this; }, writable: true });
