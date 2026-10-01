@@ -17,7 +17,7 @@ import document from "./document.js";
 import HTMLElement, { Node, Element, HTMLImageElement, HTMLCanvasElement,
                        HTMLAudioElement, HTMLMediaElement, HTMLVideoElement } from "./element.js";
 import EventTarget from "./event-target.js";
-import { Event, TouchEvent, MouseEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent } from "./events.js";
+import { Event, TouchEvent, MouseEvent, PointerEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent } from "./events.js";
 import { GamepadEvent, connectGamepadEvents } from "./gamepad.js";
 import Image from "./image.js";
 import Canvas from "./canvas.js";
@@ -30,6 +30,7 @@ import Intl from "./intl.js";
 import DOMException from "./dom-exception.js";
 import { atob, btoa } from "./base64.js";
 import { Touch, touchList } from "./touch.js";
+import { createPointerBridge, installPointerCapture, pointerCaptureMethods } from "./pointer.js";
 
 if (!globalThis.__migoWebAdapterInjected) {
   globalThis.__migoWebAdapterInjected = true;
@@ -69,12 +70,19 @@ if (!globalThis.__migoWebAdapterInjected) {
     return ev.defaultPrevented;
   };
 
+  // Pointer events for every contact, ahead of the touch or mouse events of the same contact (pointer.js).
+  installPointerCapture(canvas);
+  const _pointers = createPointerBridge(_emit, canvas);
+
   // ---- Touch -> DOM touch events, tracking W3C compat-mouse suppression. ----
   // `_touchCompat` is null when no touch interaction is concurrent; otherwise it
   // is the current interaction's touchstart `defaultPrevented`, which decides
   // whether the paired compatibility mouse events are dropped.
   let _touchCompat = null;
   const _forwardTouch = (type) => (e) => {
+    const changed = touchList(canvas, e.changedTouches || e.touches);
+    // A cancelled pointerdown stops this contact's compatibility mouse events, like a cancelled touchstart.
+    const pointerPrevented = _pointers.touch(type, changed, e.timeStamp);
     const touches = touchList(canvas, e.touches);
     const ev = new TouchEvent(type, {
       bubbles: true,
@@ -82,12 +90,12 @@ if (!globalThis.__migoWebAdapterInjected) {
       touches,
       // Every point is on the one canvas the app owns, so each one is also a target touch.
       targetTouches: touches,
-      changedTouches: touchList(canvas, e.changedTouches || e.touches),
+      changedTouches: changed,
     });
     ev.timeStamp = e.timeStamp;
     const prevented = _emit(ev);
     if (type === "touchstart") {
-      _touchCompat = prevented;
+      _touchCompat = prevented || pointerPrevented;
     } else if (type === "touchend" || type === "touchcancel") {
       // Keep the flag through the (microtask-deferred) compat-mouse burst, then
       // clear on a macrotask so a later standalone mouse click is not gated.
@@ -105,20 +113,24 @@ if (!globalThis.__migoWebAdapterInjected) {
   // Deferring the mouse dispatch by TWO microtasks guarantees it runs after the
   // single-microtask touch drain, so the touchstart's preventDefault is known
   // before we decide whether this compat mouse event is suppressed.
-  const _emitCompatMouse = (type, src, extra) => {
+  // `mouseSuppressed`: the contact's pointerdown was cancelled, which stops its mousedown / mousemove / mouseup (the
+  // `click` that follows a mouseup is not affected: UI Events, "Mouse events and pointer events").
+  const _emitCompatMouse = (type, src, extra, mouseSuppressed) => {
     Promise.resolve().then().then(() => {
       if (_touchCompat === true) return; // paired touch was preventDefault()ed
-      const ev = new MouseEvent(type, {
-        bubbles: true,
-        cancelable: true,
-        clientX: src.x,
-        clientY: src.y,
-        button: src.button,
-        buttons: type === "mouseup" ? 0 : 1,
-        ...extra,
-      });
-      ev.timeStamp = src.timeStamp;
-      _emit(ev);
+      if (!mouseSuppressed) {
+        const ev = new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: src.x,
+          clientY: src.y,
+          button: src.button,
+          buttons: type === "mouseup" ? 0 : 1,
+          ...extra,
+        });
+        ev.timeStamp = src.timeStamp;
+        _emit(ev);
+      }
       if (type === "mouseup") {
         // DOM fires `click` after `mouseup`; it is part of the same suppressible
         // compat burst, so it only reaches content when the mouse was not dropped.
@@ -130,9 +142,18 @@ if (!globalThis.__migoWebAdapterInjected) {
       }
     });
   };
-  if (typeof migo.onMouseDown === "function") migo.onMouseDown((e) => _emitCompatMouse("mousedown", e));
-  if (typeof migo.onMouseMove === "function") migo.onMouseMove((e) => _emitCompatMouse("mousemove", e, { movementX: e.movementX, movementY: e.movementY }));
-  if (typeof migo.onMouseUp === "function") migo.onMouseUp((e) => _emitCompatMouse("mouseup", e));
+  // The pointer event goes first, synchronously; the compatibility mouse event follows two microtasks later.
+  let _mousePointerPrevented = false;
+  const _forwardMouse = (type, extra) => (e) => {
+    const prevented = _pointers.mouse(type, e);
+    if (type === "mousedown") _mousePointerPrevented = prevented;
+    const suppressed = _mousePointerPrevented;
+    if (type === "mouseup") _mousePointerPrevented = false;
+    _emitCompatMouse(type, e, extra && extra(e), suppressed);
+  };
+  if (typeof migo.onMouseDown === "function") migo.onMouseDown(_forwardMouse("mousedown"));
+  if (typeof migo.onMouseMove === "function") migo.onMouseMove(_forwardMouse("mousemove", (e) => ({ movementX: e.movementX, movementY: e.movementY })));
+  if (typeof migo.onMouseUp === "function") migo.onMouseUp(_forwardMouse("mouseup"));
 
   // ---- Wheel -> DOM wheel event (no touch equivalent, no compat gating). ----
   if (typeof migo.onWheel === "function") {
@@ -227,7 +248,7 @@ if (!globalThis.__migoWebAdapterInjected) {
     HTMLElement, Element, Node,
     HTMLImageElement, HTMLCanvasElement, HTMLAudioElement,
     HTMLMediaElement, HTMLVideoElement,
-    EventTarget, Event, Touch, TouchEvent, MouseEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent, GamepadEvent,
+    EventTarget, Event, Touch, TouchEvent, MouseEvent, PointerEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent, GamepadEvent,
     Image, Audio,
     XMLHttpRequest, WebSocket, FileReader,
     localStorage,

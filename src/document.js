@@ -40,6 +40,8 @@ const document = {
 
   head,
   body,
+  // The element with focus; `canvas.focus()` sets it.
+  activeElement: body,
 
   // Set true by index.js when the document becomes ready (just before DOMContentLoaded is dispatched); gates
   // display-canvas routing below so it only applies to canvases created while an engine boots, not to the
