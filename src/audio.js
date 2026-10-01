@@ -22,6 +22,36 @@ const _audioFinalizer =
       })
     : null;
 
+// What the runtime's audio decoders accept (engine/crates/audio/src/decoder: wav.rs, mp3.rs, ogg.rs): PCM WAV, MP3 and Ogg
+// Vorbis. Nothing else -- not AAC/M4A, FLAC, Opus or WebM -- so `canPlayType` says so, and a library that picks a source by
+// asking (Howler.js tests `audio/mpeg`, `audio/ogg; codecs="vorbis"`, `audio/wav; codecs="1"`, ... and refused to load any
+// sound with "No codec support" while this method was missing) chooses one the engine can play.
+const PLAYABLE = {
+  "audio/mpeg": { codecs: ["mp3"], certain: true },
+  "audio/mp3": { codecs: ["mp3"], certain: true },
+  "audio/x-mpeg": { codecs: ["mp3"], certain: true },
+  "audio/ogg": { codecs: ["vorbis"], certain: false },
+  "application/ogg": { codecs: ["vorbis"], certain: false },
+  "audio/wav": { codecs: ["1"], certain: false },
+  "audio/wave": { codecs: ["1"], certain: false },
+  "audio/x-wav": { codecs: ["1"], certain: false },
+  "audio/vnd.wave": { codecs: ["1"], certain: false },
+};
+
+/// HTMLMediaElement.canPlayType: "" (cannot), "maybe" (the container is supported, the codec was not named) or "probably".
+export function canPlayType(type) {
+  const text = String(type).trim().toLowerCase();
+  const semicolon = text.indexOf(";");
+  const essence = (semicolon === -1 ? text : text.slice(0, semicolon)).trim();
+  const entry = Object.prototype.hasOwnProperty.call(PLAYABLE, essence) ? PLAYABLE[essence] : null;
+  if (!entry) return "";
+  const match = semicolon === -1 ? null : /codecs\s*=\s*"?([^"]*)"?/.exec(text.slice(semicolon + 1));
+  if (!match) return entry.certain ? "probably" : "maybe";
+  const named = match[1].split(",").map((codec) => codec.trim()).filter(Boolean);
+  if (named.length === 0) return entry.certain ? "probably" : "maybe";
+  return named.every((codec) => entry.codecs.includes(codec)) ? "probably" : "";
+}
+
 export default class Audio extends EventTarget {
   constructor(src) {
     super();
@@ -90,7 +120,14 @@ export default class Audio extends EventTarget {
   get paused() { return !!this._ctx.paused; }
   get readyState() { return this._readyState; }
 
-  play() { this._ctx.play(); }
+  canPlayType(type) { return canPlayType(type); }
+
+  // HTMLMediaElement.play() returns a promise that settles when playback has started. InnerAudioContext reports the start
+  // as an event, and a rejected play() (autoplay policy, bad source) as an error event.
+  play() {
+    this._ctx.play();
+    return Promise.resolve();
+  }
   pause() { this._ctx.pause(); }
 
   load() {} // no-op — InnerAudioContext loads on src set / play
