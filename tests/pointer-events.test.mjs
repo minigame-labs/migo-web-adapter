@@ -189,6 +189,9 @@ assert.equal(canvas.isConnected, false, "a canvas nobody appended is not connect
 globalThis.document.body.appendChild(canvas);
 assert.equal(canvas.isConnected, true, "appended to <body> it is");
 assert.equal(canvas.parentElement, globalThis.document.body);
+assert.equal(canvas.getRootNode(), globalThis.document.documentElement || globalThis.document.body.parentNode || globalThis.document.body, "an attached canvas's root is the top of its tree");
+const loose = globalThis.document.createElement("div");
+assert.equal(loose.getRootNode(), loose, "a node with no parent is its own root");
 assert.equal("requestPointerLock" in canvas, false, "what Migo cannot do stays absent, so feature detection is honest");
 
 console.log("pointer-events tests: all passed");

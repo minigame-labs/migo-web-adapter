@@ -56,6 +56,14 @@ export class Node extends EventTarget {
     this.ownerDocument = null;
   }
 
+  // The root of the tree this node is in: the document when it is attached under it, else the topmost ancestor
+  // (the node itself when it has none). three.js's OrbitControls asks it to find where to listen for pointer-up.
+  getRootNode() {
+    let node = this;
+    while (node.parentNode) node = node.parentNode;
+    return node;
+  }
+
   appendChild(node) {
     if (!node) return null;
     if (node.parentNode) node.parentNode.removeChild(node);
