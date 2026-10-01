@@ -2,17 +2,32 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-一个浏览器风格的 BOM/DOM 适配层，构建在 [migo](https://github.com/minigame-labs/migo) 小游戏运行时之上。让为浏览器式环境编写的游戏（Cocos Creator、Egret、Laya、Pixi、原生 WebGL）无需改动即可在 migo 上运行，方式是把 `window.*`、`document.*`、`Image`、`XMLHttpRequest` 等映射到对应的 `migo.*` API 上。
+一个浏览器风格的 BOM/DOM 适配层，构建在 [migo](https://github.com/minigame-labs/migo) 小游戏运行时之上。让为浏览器式环境编写的游戏在 migo 上运行，方式是把 `window.*`、`document.*`、`Image`、`XMLHttpRequest` 等映射到对应的 `migo.*` API 上。
 
 migo 运行时刻意**不内置 BOM/DOM**——它只提供 `migo.*` 加标准 JavaScript。浏览器风格的全局对象是这个适配层的职责。如果你的内容是 wx 形态的（直接调用 `wx.*`），请看 [`migo-wx-adapter`](https://github.com/minigame-labs/migo-wx-adapter)——两者可以自由组合，因为它们各自只碰互不重叠的全局对象。
 
 ## 什么时候需要它
 
 - 你的游戏使用浏览器全局对象（`document.createElement`、`new Image()`、`window.innerWidth`、`XMLHttpRequest`、`localStorage`、`WebSocket` 等）。
-- 你的引擎是基于浏览器式环境构建的（Cocos / Egret / Laya / Pixi / Phaser / Three.js / 自研 WebGL 技术栈）。
+- 你的引擎是基于浏览器式环境构建的（Pixi / Phaser / three.js / Babylon.js / PlayCanvas / 自研 WebGL 技术栈:实际跑过哪些见下面的**已验证的引擎**）。
 - 你想以最小改动把一个 wx 风格的游戏搬到 migo 上运行。
 
 如果你的游戏只直接调用 `migo.*` API（不用 `window`，不用 `document`），你不需要这个适配层。
+
+## 已验证的引擎
+
+下面列出的全部由 [conformance 的 `engines/` 套件](https://github.com/minigame-labs/migo-conformance/tree/master/engines)在真实 macOS 宿主上原样运行验证(版本固定;场景绘制已知颜色并读回像素、回放点击与拖拽、从游戏包加载资源、播放声音)。陌生人用一条脚本就能复现。
+
+| 引擎 | 版本 | 检查内容 |
+|---|---|---|
+| Pixi | 7.4.3 | 渲染(图形、精灵、文本、渲染纹理)、ticker、指针事件 |
+| Phaser | 3.90.0 | 渲染、场景输入(`pointerdown` 落在点击的精确位置)、加载器(图片、精灵表、JSON、文本、音频、缺失文件)、声音播放到 `complete` 事件 |
+| three.js | 0.186.1 | 渲染、阴影、MSAA 目标、PMREM 环境、实例化、蒙皮、深度纹理、多渲染目标、OrbitControls、FileLoader / TextureLoader / AudioLoader / GLTFLoader |
+| Babylon.js | 9.29.0 | 渲染、光照场景、动态纹理、指针拾取 |
+| PlayCanvas | 2.22.6 | 渲染、触摸输入 |
+| Howler.js | 2.2.4 | 经 WebAudio 与 `<audio>` 元素两条路径加载、解码、播放并结束声音 |
+
+Cocos Creator、Egret 和 Laya **不在**该套件中:它们自带平台胶水代码,这里没有验证过,因此本 README 不对它们做任何声明。
 
 ## 安装
 
