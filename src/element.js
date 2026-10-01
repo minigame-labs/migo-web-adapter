@@ -3,6 +3,7 @@
 // appendChild / removeChild / parentNode during canvas setup. We track
 // parent + children just well enough to make those calls non-throwing.
 
+import { pointerCaptureMethods } from "./pointer.js";
 import EventTarget from "./event-target.js";
 
 // Browser boot pages commonly load the engine/game via a `<script src>` that
@@ -180,4 +181,9 @@ export class HTMLMediaElement extends HTMLElement {
 
 export class HTMLVideoElement extends HTMLElement {
   constructor() { super("video"); }
+}
+
+// Pointer capture on every element, as engines call it on whatever they were handed (pointer.js).
+for (const name of Object.keys(pointerCaptureMethods)) {
+  Object.defineProperty(HTMLElement.prototype, name, { value: pointerCaptureMethods[name], writable: true, configurable: true });
 }
