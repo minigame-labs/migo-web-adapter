@@ -2,17 +2,32 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-A browser-style BOM/DOM adapter layered on top of the [migo](https://github.com/minigame-labs/migo) mini-game runtime. Lets games written for browser-like environments (Cocos Creator, Egret, Laya, Pixi, raw WebGL) run on migo unchanged, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
+A browser-style BOM/DOM adapter layered on top of the [migo](https://github.com/minigame-labs/migo) mini-game runtime. Lets games written for browser-like environments run on migo, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
 
 The migo runtime intentionally ships **no BOM/DOM** — it offers only `migo.*` plus standard JavaScript. Browser-style globals are this adapter's job. If your content is wx-shaped instead (calls `wx.*` directly), see [`migo-wx-adapter`](https://github.com/minigame-labs/migo-wx-adapter) — the two compose freely, since they touch disjoint globals.
 
 ## When to use
 
 - Your game uses browser globals (`document.createElement`, `new Image()`, `window.innerWidth`, `XMLHttpRequest`, `localStorage`, `WebSocket`, etc.).
-- Your engine is built against a browser-like environment (Cocos / Egret / Laya / Pixi / Phaser / Three.js / a custom WebGL stack).
+- Your engine is built against a browser-like environment (Pixi / Phaser / three.js / Babylon.js / PlayCanvas / a custom WebGL stack: see **Verified engines** below for what has actually been run).
 - You want to drop a wx-style game onto migo with minimal changes.
 
 If your game uses only `migo.*` APIs directly (no `window`, no `document`), you don't need this adapter.
+
+## Verified engines
+
+Everything below is run, unmodified, through the real macOS host by the [conformance `engines/` suite](https://github.com/minigame-labs/migo-conformance/tree/master/engines) (pinned versions; scenes that draw known colours and read the pixels back, play taps and drags, load assets from the game package, and play sounds). A stranger can rerun it with one script.
+
+| Engine | Version | What is checked |
+|---|---|---|
+| Pixi | 7.4.3 | rendering (graphics, sprites, text, render textures), ticker, pointer events |
+| Phaser | 3.90.0 | rendering, scene input (`pointerdown` at the exact tap), the loader (images, spritesheet, JSON, text, audio, a missing file), a sound to its `complete` event |
+| three.js | 0.186.1 | rendering, shadows, MSAA targets, PMREM environments, instancing, skinning, depth textures, multiple render targets, OrbitControls, FileLoader / TextureLoader / AudioLoader / GLTFLoader |
+| Babylon.js | 9.29.0 | rendering, a lit scene, dynamic textures, pointer picking |
+| PlayCanvas | 2.22.6 | rendering, touch input |
+| Howler.js | 2.2.4 | loading, decoding, playing and ending a sound through WebAudio and through an `<audio>` element |
+
+Cocos Creator, Egret and Laya are **not** in that suite: they ship their own platform glue and have not been verified here, so nothing in this README claims them.
 
 ## Install
 
