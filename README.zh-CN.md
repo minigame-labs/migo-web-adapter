@@ -71,6 +71,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | Window 自引用 | `window`、`self`、`parent`、`top` |
 | 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`WheelEvent`、`KeyboardEvent`、`CompositionEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
 | 屏上画布 | `globalThis.canvas`(也可通过 `document.getElementById("GameCanvas")` 获取) |
+| Migo 的 V8 没有的标准全局 | `atob`、`btoa`(HTML 标准 base64,输入非法时抛 `InvalidCharacterError`)、`DOMException`(name、message、旧式 `code`)。宿主自带时不覆盖 |
 
 ## 与 `migo.*` 的映射关系
 

@@ -86,6 +86,13 @@ assert.equal(typeof sandbox.Image, "function");
 assert.equal(typeof sandbox.XMLHttpRequest, "function");
 assert.equal(typeof sandbox.WebSocket, "function");
 assert.equal(typeof sandbox.HTMLElement, "function");
+// A fresh realm has none of the standard globals Migo's V8 lacks either; the bundle supplies them (atob is what
+// PlayCanvas died on), and the exception they throw is the specification's.
+assert.equal(typeof sandbox.atob, "function", "bundle publishes atob");
+assert.equal(typeof sandbox.btoa, "function", "bundle publishes btoa");
+assert.equal(typeof sandbox.DOMException, "function", "bundle publishes DOMException");
+assert.equal(sandbox.atob(sandbox.btoa("migo")), "migo");
+assert.throws(() => sandbox.atob("!"), (e) => e.name === "InvalidCharacterError" && e instanceof sandbox.DOMException);
 
 // 4. document basics
 const div = sandbox.document.createElement("div");
