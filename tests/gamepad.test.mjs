@@ -23,7 +23,13 @@ import { join } from "node:path";
 const REF = process.env.MIGO_GAMEPAD_REF || "master";
 const BASE_URL = `https://raw.githubusercontent.com/minigame-labs/migo-runtime/${REF}/engine/crates/runtime-v8/src/input/`;
 
+// MIGO_RUNTIME_DIR names a checkout of migo-runtime to read the files from instead of fetching them (offline, or a
+// change to the engine's input code that is not on master yet).
 async function fetchSource(name) {
+  if (process.env.MIGO_RUNTIME_DIR) {
+    const { readFile } = await import("node:fs/promises");
+    return readFile(join(process.env.MIGO_RUNTIME_DIR, "engine/crates/runtime-v8/src/input", name), "utf8");
+  }
   const url = BASE_URL + name;
   const res = await fetch(url);
   if (!res.ok) {
@@ -150,18 +156,22 @@ assert.equal(pad.buttons[1].pressed, false, "a non-zero value is not itself a pr
 assert.equal(pad.buttons[1].value, 0.25, "analogue value preserved");
 
 // ---- 8. Listener mutation during dispatch ---------------------------------
-// Removing a listener from inside a listener must not skip the next one.
+// A listener removed from inside an earlier listener is not called (the DOM Standard skips a listener whose "removed" flag is
+// set), and removing it must not make the loop skip the listener after it.
 const order = [];
 const second = () => order.push("second");
+const third = () => order.push("third");
 const first = () => {
   order.push("first");
   globalThis.removeEventListener("gamepadconnected", second);
 };
 globalThis.addEventListener("gamepadconnected", first);
 globalThis.addEventListener("gamepadconnected", second);
+globalThis.addEventListener("gamepadconnected", third);
 runtime._internalTriggerGamepadConnected(0, "Second Pad", "standard", 2, 4);
-assert.deepEqual(order, ["first", "second"], "removal mid-dispatch does not skip a listener");
+assert.deepEqual(order, ["first", "third"], "a listener removed mid-dispatch is not called, and the one after it still is");
 globalThis.removeEventListener("gamepadconnected", first);
+globalThis.removeEventListener("gamepadconnected", third);
 
 // The pad that just connected fills the previously-null slot 0.
 assert.equal(navigator.getGamepads()[0].id, "Second Pad", "slot 0 now holds a pad");
