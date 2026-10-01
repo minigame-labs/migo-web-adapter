@@ -71,6 +71,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | Window 自引用 | `window`、`self`、`parent`、`top` |
 | 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`WheelEvent`、`KeyboardEvent`、`CompositionEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
 | 屏上画布 | `globalThis.canvas`(也可通过 `document.getElementById("GameCanvas")` 获取) |
+| DOM 指针 | `PointerEvent`(`pointerId`、`pointerType`、`isPrimary`、`pressure`、`width/height` 等);`setPointerCapture` / `releasePointerCapture` / `hasPointerCapture` |
 | DOM 触摸 | `Touch`(`identifier`、`target`、`clientX/Y`、`pageX/Y`、`screenX/Y`、`radiusX/Y`、`rotationAngle`、`force`);`TouchEvent` 的 `touches` / `targetTouches` / `changedTouches` 带 `item(i)` |
 | Migo 的 V8 没有的标准全局 | `atob`、`btoa`(HTML 标准 base64,输入非法时抛 `InvalidCharacterError`)、`DOMException`(name、message、旧式 `code`)。宿主自带时不覆盖 |
 
@@ -112,6 +113,8 @@ new pc.Application(canvas, { graphicsDeviceOptions: { deviceTypes: ['webgl2'] } 
 ```
 
 触摸会以 DOM `TouchEvent` 的形式送达画布、`document` 和 `window`,其中 `Touch` 对象带有 `target`(画布)、`screenX/Y` 和接触椭圆;Phaser 场景级的 `input.on('pointerdown')` 依赖这个 `target`。
+
+**Pointer Events。** `PointerEvent` 存在,每个触摸和鼠标事件之前都会先收到它的指针事件,顺序按规范:`pointerover`、`pointerenter`、`pointerdown`,然后才是 `touchstart`/`mousedown`;`pointermove`;`pointerup`、`pointerout`、`pointerleave`;`pointercancel`。触摸的 `pointerType` 是 `"touch"`,id 为宿主的 identifier + 2,最先按下的接触是 primary;鼠标是指针 1。取消 `pointerdown` 会阻止该接触的兼容鼠标事件(不影响 `click`),与浏览器一致。所有元素都有 `setPointerCapture` / `releasePointerCapture` / `hasPointerCapture`(接触结束时捕获自动释放)。Babylon.js 和 three.js 的 OrbitControls 只监听指针事件;Pixi 在 `PointerEvent` 存在时切换到指针事件。画布还拥有浏览器画布一定有的元素成员(`focus`、`blur`、`tagName`、`ownerDocument`、`isConnected` 等),因为 Babylon 的 pointer-down 处理函数以 `canvas.focus()` 结尾;Migo 做不到的(`requestPointerLock`、`requestFullscreen`)保持缺失,让特性检测保持诚实。
 
 ## BOM 语义
 

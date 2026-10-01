@@ -81,6 +81,7 @@ game that *also* imports the ESM entry.
 | Window self-references | `window`, `self`, `parent`, `top` |
 | Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `WheelEvent`, `KeyboardEvent`, `CompositionEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
 | On-screen canvas | `globalThis.canvas` (also `document.getElementById("GameCanvas")`) |
+| DOM pointer | `PointerEvent` (`pointerId`, `pointerType`, `isPrimary`, `pressure`, `width/height`, ...); `setPointerCapture` / `releasePointerCapture` / `hasPointerCapture` |
 | DOM touch | `Touch` (`identifier`, `target`, `clientX/Y`, `pageX/Y`, `screenX/Y`, `radiusX/Y`, `rotationAngle`, `force`); `TouchEvent.touches` / `targetTouches` / `changedTouches` are lists with `item(i)` |
 | Standard globals Migo's V8 lacks | `atob`, `btoa` (HTML Standard base64, `InvalidCharacterError` on bad input), `DOMException` (name, message, legacy `code`). Published only when the host has none of its own |
 
@@ -122,6 +123,8 @@ new pc.Application(canvas, { graphicsDeviceOptions: { deviceTypes: ['webgl2'] } 
 ```
 
 Touches reach the canvas, `document` and `window` as DOM `TouchEvent`s whose `Touch` objects have a `target` (the canvas), `screenX/Y` and the contact ellipse; Phaser's scene-level `input.on('pointerdown')` depends on that `target`.
+
+**Pointer Events.** `PointerEvent` exists, and every touch and mouse event is preceded by its pointer event, in the order the specification gives (`pointerover`, `pointerenter`, `pointerdown`, then `touchstart`/`mousedown`; `pointermove`; `pointerup`, `pointerout`, `pointerleave`; `pointercancel`). A touch is `pointerType: "touch"` with id = the host's identifier + 2 and the first contact down is primary; a mouse is pointer 1. Cancelling a `pointerdown` stops that contact's compatibility mouse events (not the `click`), as in a browser. `setPointerCapture` / `releasePointerCapture` / `hasPointerCapture` work on every element (capture ends with the contact). Babylon.js and three.js's OrbitControls listen to pointer events and nothing else; Pixi switches to them when `PointerEvent` exists. The canvas also gets the element members a browser canvas always has (`focus`, `blur`, `tagName`, `ownerDocument`, `isConnected`, ...), because Babylon's pointer-down handler ends with `canvas.focus()`; what Migo cannot do (`requestPointerLock`, `requestFullscreen`) stays absent so feature detection is honest.
 
 ## BOM semantics
 
