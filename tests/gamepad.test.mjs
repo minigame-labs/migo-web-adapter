@@ -1,6 +1,6 @@
 // W3C Gamepad API surface, tested against the REAL runtime transport.
 //
-// input/04_gamepad.js is dependency-free ESM, so this imports it directly
+// input/04_gamepad.js is dependency-free ESM (bar the input clock beside it), so this imports it directly
 // instead of faking it. That matters: the properties under test here -- null
 // slots, frozen views, object identity -- are the runtime's to provide, and a
 // hand-written fake would happily agree with a broken adapter about all three.
@@ -21,21 +21,32 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const REF = process.env.MIGO_GAMEPAD_REF || "master";
-const SOURCE_URL = `https://raw.githubusercontent.com/minigame-labs/migo/${REF}/engine/crates/runtime-v8/src/input/04_gamepad.js`;
+const BASE_URL = `https://raw.githubusercontent.com/minigame-labs/migo-runtime/${REF}/engine/crates/runtime-v8/src/input/`;
 
-const res = await fetch(SOURCE_URL);
-if (!res.ok) {
-  throw new Error(
-    `could not fetch the real gamepad transport source for ref '${REF}' ` +
-    `from ${SOURCE_URL}: HTTP ${res.status}`
-  );
+async function fetchSource(name) {
+  const url = BASE_URL + name;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`could not fetch the real gamepad transport source for ref '${REF}' from ${url}: HTTP ${res.status}`);
+  }
+  return res.text();
 }
-const source = await res.text();
 
+// 04_gamepad.js stamps events with the engine's input clock, which the engine imports as
+// `ext:host_v8_touch/00_input_clock.js` -- a specifier only the runtime's module loader resolves. The module is just
+// as dependency-free as the gamepad one, so fetch it too and point the import at the copy beside it; any other `ext:`
+// import appearing in either file is the drift this test exists to notice, so it is refused by name.
 const tmpDir = await mkdtemp(join(tmpdir(), "migo-gamepad-test-"));
-const tmpFile = join(tmpDir, "04_gamepad.js");
-await writeFile(tmpFile, source, "utf8");
-const runtime = await import(`file://${tmpFile}`);
+let gamepadSource = await fetchSource("04_gamepad.js");
+const clockSpecifier = "ext:host_v8_touch/00_input_clock.js";
+gamepadSource = gamepadSource.split(clockSpecifier).join("./00_input_clock.js");
+const otherExt = [...gamepadSource.matchAll(/from\s+["'](ext:[^"']+)["']/g)].map((m) => m[1]);
+if (otherExt.length) {
+  throw new Error(`04_gamepad.js imports ${otherExt.join(", ")}, which this test cannot resolve; teach it how, rather than skipping the check`);
+}
+await writeFile(join(tmpDir, "00_input_clock.js"), await fetchSource("00_input_clock.js"), "utf8");
+await writeFile(join(tmpDir, "04_gamepad.js"), gamepadSource, "utf8");
+const runtime = await import(`file://${join(tmpDir, "04_gamepad.js")}`);
 await rm(tmpDir, { recursive: true, force: true });
 
 // ---- Fake migo carrying the real gamepad transport ------------------------
@@ -125,7 +136,15 @@ runtime._internalTriggerGamepadState(2, 1234, [4, 8, 0.5, 0, 0, 0,
   0, 0, 0.25,  // button 1: NOT pressed despite a non-zero value
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 assert.equal(pad.axes[0], 0.5, "axis value updates through the frozen view");
-assert.equal(pad.timestamp, 1234, "timestamp updates");
+// The host's stamp is on the host's clock, which the C ABI does not name; the engine hands content the page's
+// (`performance.now()`'s), never in the future, so the test says that rather than echoing the host's number.
+assert.ok(Number.isFinite(pad.timestamp) && pad.timestamp > 0 && pad.timestamp <= performance.now(), "timestamp updates, on the page clock");
+const firstStamp = pad.timestamp;
+runtime._internalTriggerGamepadState(2, 1234 + 16, [4, 8, 0.5, 0, 0, 0,
+  1, 1, 1.0,
+  0, 0, 0.25,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+assert.ok(pad.timestamp >= firstStamp && pad.timestamp <= performance.now(), "a later sample is not earlier, and is not in the future");
 assert.equal(pad.buttons[0].pressed, true, "digital press reported");
 assert.equal(pad.buttons[1].pressed, false, "a non-zero value is not itself a press");
 assert.equal(pad.buttons[1].value, 0.25, "analogue value preserved");
