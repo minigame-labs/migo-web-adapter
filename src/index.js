@@ -27,6 +27,8 @@ import XMLHttpRequest from "./xhr.js";
 import WebSocket from "./websocket.js";
 import FileReader from "./file-reader.js";
 import Intl from "./intl.js";
+import DOMException from "./dom-exception.js";
+import { atob, btoa } from "./base64.js";
 
 if (!globalThis.__migoWebAdapterInjected) {
   globalThis.__migoWebAdapterInjected = true;
@@ -235,6 +237,12 @@ if (!globalThis.__migoWebAdapterInjected) {
   // `Intl` is absent under Migo's no-i18n V8; provide the polyfill, but never
   // clobber a real `Intl` (e.g. a future ICU-enabled build or a host browser).
   if (!globalThis.Intl) surface.Intl = Intl;
+
+  // Standard globals a browser has and Migo's V8 does not. Published only when absent, so a host that has the real
+  // ones (a browser, Node under test) keeps them.
+  if (typeof globalThis.DOMException !== "function") surface.DOMException = DOMException;
+  if (typeof globalThis.atob !== "function") surface.atob = atob;
+  if (typeof globalThis.btoa !== "function") surface.btoa = btoa;
 
   for (const key of Object.keys(surface)) {
     try {

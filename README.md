@@ -81,6 +81,7 @@ game that *also* imports the ESM entry.
 | Window self-references | `window`, `self`, `parent`, `top` |
 | Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `WheelEvent`, `KeyboardEvent`, `CompositionEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
 | On-screen canvas | `globalThis.canvas` (also `document.getElementById("GameCanvas")`) |
+| Standard globals Migo's V8 lacks | `atob`, `btoa` (HTML Standard base64, `InvalidCharacterError` on bad input), `DOMException` (name, message, legacy `code`). Published only when the host has none of its own |
 
 ## Mapping to `migo.*`
 
