@@ -29,6 +29,7 @@ import FileReader from "./file-reader.js";
 import Intl from "./intl.js";
 import DOMException from "./dom-exception.js";
 import { atob, btoa } from "./base64.js";
+import { Touch, touchList } from "./touch.js";
 
 if (!globalThis.__migoWebAdapterInjected) {
   globalThis.__migoWebAdapterInjected = true;
@@ -74,11 +75,14 @@ if (!globalThis.__migoWebAdapterInjected) {
   // whether the paired compatibility mouse events are dropped.
   let _touchCompat = null;
   const _forwardTouch = (type) => (e) => {
+    const touches = touchList(canvas, e.touches);
     const ev = new TouchEvent(type, {
       bubbles: true,
       cancelable: true,
-      touches: e.touches || [],
-      changedTouches: e.changedTouches || e.touches || [],
+      touches,
+      // Every point is on the one canvas the app owns, so each one is also a target touch.
+      targetTouches: touches,
+      changedTouches: touchList(canvas, e.changedTouches || e.touches),
     });
     ev.timeStamp = e.timeStamp;
     const prevented = _emit(ev);
@@ -223,7 +227,7 @@ if (!globalThis.__migoWebAdapterInjected) {
     HTMLElement, Element, Node,
     HTMLImageElement, HTMLCanvasElement, HTMLAudioElement,
     HTMLMediaElement, HTMLVideoElement,
-    EventTarget, Event, TouchEvent, MouseEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent, GamepadEvent,
+    EventTarget, Event, Touch, TouchEvent, MouseEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent, GamepadEvent,
     Image, Audio,
     XMLHttpRequest, WebSocket, FileReader,
     localStorage,
@@ -289,14 +293,14 @@ if (!globalThis.__migoWebAdapterInjected) {
     }
   };
   const _fireDomLifecycle = () => {
+    // The document is ready from here: canvases engines create now (Phaser boots on DOMContentLoaded) are
+    // display candidates; the ones made while the script loaded were feature probes (document.js).
+    document._domReady = true;
     _setReadyState("interactive");
     const domReady = { type: "DOMContentLoaded", target: document, currentTarget: document };
     document.dispatchEvent(domReady);
     _winTarget.dispatchEvent(domReady); // some libs listen for it on window
     _setReadyState("complete");
-    // Gate display-canvas routing (document.js) to boot-time canvases: the
-    // load listeners below are where engines construct and create their canvas.
-    document._loadFired = true;
     const load = { type: "load", target: globalThis, currentTarget: globalThis };
     _winTarget.dispatchEvent(load);     // window 'load' listeners
     document.dispatchEvent(load);        // and document, for engines that listen there

@@ -41,9 +41,10 @@ const document = {
   head,
   body,
 
-  // Set true by index.js when the `load` event fires; gates display-canvas
-  // routing below so it only applies to canvases created during engine boot.
-  _loadFired: false,
+  // Set true by index.js when the document becomes ready (just before DOMContentLoaded is dispatched); gates
+  // display-canvas routing below so it only applies to canvases created while an engine boots, not to the
+  // feature-detection canvases an engine makes while its script loads.
+  _domReady: false,
   _mainCanvasRouted: false,
 
   createElement(tag) {
@@ -53,12 +54,15 @@ const document = {
       // `globalThis.canvas`). Browser engines that create their own render
       // canvas via `document.createElement('canvas')` (e.g. Phaser) would
       // otherwise draw into an offscreen buffer that is never shown. So the
-      // first canvas created after `load`, while the onscreen canvas is still
-      // unclaimed (no rendering context), is treated as the engine's display
-      // canvas and backed by the onscreen surface. Engines that instead reuse
-      // the global `canvas` (Pixi/Cocos) claim it before this fires and are
-      // unaffected; feature-detection canvases are created before `load`.
-      if (this._loadFired && !this._mainCanvasRouted
+      // first canvas created once the document is ready (DOMContentLoaded and
+      // later: Phaser boots on DOMContentLoaded, other engines in a `load`
+      // handler), while the onscreen canvas is still unclaimed (no rendering
+      // context), is treated as the engine's display canvas and backed by the
+      // onscreen surface. Engines that instead reuse the global `canvas`
+      // (Pixi/Cocos) claim it before this fires and are unaffected;
+      // feature-detection canvases are created while the script loads, before
+      // the document is ready.
+      if (this._domReady && !this._mainCanvasRouted
           && globalThis.canvas && !globalThis.canvas._context) {
         this._mainCanvasRouted = true;
         return globalThis.canvas;
