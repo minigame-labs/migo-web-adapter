@@ -9,6 +9,7 @@ import Canvas from "./canvas.js";
 import Audio from "./audio.js";
 import location from "./location.js";
 import EventTarget from "./event-target.js";
+import { byTagName, byClassName, byId, queryAll, queryFirst } from "./query.js";
 
 const _docTarget = new EventTarget();
 
@@ -78,6 +79,9 @@ const document = {
 
   createElementNS(_ns, tag) { return this.createElement(tag); },
 
+  // A game owns the whole window: it has focus while it is visible. p5.js calls this while it loads.
+  hasFocus() { return this.visibilityState === "visible"; },
+
   createTextNode(text) { return { nodeType: 3, textContent: String(text), nodeValue: String(text) }; },
 
   getElementById(id) {
@@ -87,14 +91,15 @@ const document = {
     if (globalThis.canvas && (globalThis.canvas.id === id || id === "GameCanvas")) {
       return globalThis.canvas;
     }
-    return null;
+    return byId(documentElement, id);
   },
 
-  getElementsByTagName(_tag) { return []; },
-  getElementsByName(_name) { return []; },
-  getElementsByClassName(_cls) { return []; },
-  querySelector(_q) { return null; },
-  querySelectorAll(_q) { return []; },
+  // Lookups walk the tree under <html> (query.js): what an engine appended to <head> or <body> can be found again.
+  getElementsByTagName(tag) { return byTagName(documentElement, tag); },
+  getElementsByName(name) { return queryAll(documentElement, `[name="${String(name).replace(/"/g, "")}"]`); },
+  getElementsByClassName(names) { return byClassName(documentElement, names); },
+  querySelector(selector) { return queryFirst(documentElement, selector); },
+  querySelectorAll(selector) { return queryAll(documentElement, selector); },
 
   addEventListener(type, listener) { _docTarget.addEventListener(type, listener); },
   removeEventListener(type, listener) { _docTarget.removeEventListener(type, listener); },

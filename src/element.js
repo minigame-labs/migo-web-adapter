@@ -4,6 +4,8 @@
 // parent + children just well enough to make those calls non-throwing.
 
 import { pointerCaptureMethods } from "./pointer.js";
+import { ClassList } from "./class-list.js";
+import { byTagName, byClassName, byId, queryAll, queryFirst, matches, closest } from "./query.js";
 import EventTarget from "./event-target.js";
 
 // Browser boot pages commonly load the engine/game via a `<script src>` that
@@ -95,6 +97,15 @@ export class Node extends EventTarget {
 
   cloneNode() { return null; }
 
+  // Lookups in this node's own subtree (query.js).
+  getElementsByTagName(name) { return byTagName(this, name); }
+  getElementsByClassName(names) { return byClassName(this, names); }
+  getElementById(id) { return byId(this, id); }
+  querySelector(selector) { return queryFirst(this, selector); }
+  querySelectorAll(selector) { return queryAll(this, selector); }
+  matches(selector) { return matches(this, selector); }
+  closest(selector) { return closest(this, selector); }
+
   // `node.contains(other)` — engines (e.g. PixiJS CanvasSource) call
   // `document.body.contains(canvas)` to decide if a canvas is live in the DOM.
   contains(node) {
@@ -111,7 +122,7 @@ export class Element extends Node {
   constructor() {
     super();
     this.style = {};
-    this.classList = [];
+    this.classList = new ClassList(this);
     this.className = "";
     this.id = "";
     this.dataset = {};
@@ -135,10 +146,35 @@ export default class HTMLElement extends Element {
   get offsetWidth() { return this.clientWidth; }
   get offsetHeight() { return this.clientHeight; }
 
-  setAttribute(name, value) { this[name] = value; }
-  getAttribute(name) { return this[name] == null ? null : this[name]; }
-  removeAttribute(name) { delete this[name]; }
-  hasAttribute(name) { return name in this; }
+  // Attributes are strings in a map of their own; the ones engines also read as properties are mirrored (class -> className,
+  // id, data-* -> dataset, and any name that is a plain identifier -- `width`, `src`, `type` -- as a property).
+  setAttribute(name, value) {
+    const key = String(name).toLowerCase();
+    const text = String(value);
+    (this._attrs || (this._attrs = new Map())).set(key, text);
+    if (key === "class") this.className = text;
+    else if (key === "id") this.id = text;
+    else if (key === "style") { for (const rule of text.split(";")) { const colon = rule.indexOf(":"); if (colon > 0) this.style[rule.slice(0, colon).trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = rule.slice(colon + 1).trim(); } }
+    else if (key.startsWith("data-")) this.dataset[key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = text;
+    else if (/^[a-z_$][a-z0-9_$]*$/.test(key)) this[key] = text;
+  }
+  getAttribute(name) {
+    const key = String(name).toLowerCase();
+    if (this._attrs && this._attrs.has(key)) return this._attrs.get(key);
+    if (key === "id") return this.id ? String(this.id) : null;
+    if (key === "class") return this.className ? String(this.className) : null;
+    return null;
+  }
+  removeAttribute(name) {
+    const key = String(name).toLowerCase();
+    if (this._attrs) this._attrs.delete(key);
+    if (key === "class") this.className = "";
+    else if (key === "id") this.id = "";
+    else if (key.startsWith("data-")) delete this.dataset[key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())];
+    else if (/^[a-z_$][a-z0-9_$]*$/.test(key)) delete this[key];
+  }
+  hasAttribute(name) { return this.getAttribute(name) !== null; }
+  getAttributeNames() { return this._attrs ? [...this._attrs.keys()] : []; }
 
   getBoundingClientRect() {
     const w = this.clientWidth, h = this.clientHeight;
