@@ -49,6 +49,14 @@ function installElementMembers(c) {
       return false;
     },
   });
+  define("getRootNode", {
+    value() {
+      let node = this;
+      while (node.parentNode) node = node.parentNode;
+      return node;
+    },
+    writable: true,
+  });
   define("contains", { value(other) { return other === this; }, writable: true });
   define("hasAttribute", { value(name) { return typeof this.getAttribute === "function" && this.getAttribute(name) != null; }, writable: true });
   define("focus", { value() { if (globalThis.document) globalThis.document.activeElement = this; }, writable: true });
