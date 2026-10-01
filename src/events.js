@@ -15,7 +15,8 @@ export class Event {
   }
   preventDefault() { if (this.cancelable) this.defaultPrevented = true; }
   stopPropagation() {}
-  stopImmediatePropagation() {}
+  // The listeners after the current one on the same target are skipped (EventTarget.dispatchEvent reads the flag).
+  stopImmediatePropagation() { this._stopImmediate = true; }
 }
 
 export class TouchEvent extends Event {

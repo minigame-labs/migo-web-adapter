@@ -91,6 +91,11 @@ assert.equal(typeof sandbox.HTMLElement, "function");
 assert.equal(typeof sandbox.atob, "function", "bundle publishes atob");
 assert.equal(typeof sandbox.btoa, "function", "bundle publishes btoa");
 assert.equal(typeof sandbox.DOMException, "function", "bundle publishes DOMException");
+// ... and the loaders' standard globals (a fresh realm has none of them).
+for (const name of ["TextEncoder", "TextDecoder", "Blob", "File", "AbortController", "AbortSignal", "Headers", "Request", "Response", "fetch", "XMLHttpRequest", "FileReader"]) {
+  assert.equal(typeof sandbox[name], "function", `bundle publishes ${name}`);
+}
+assert.equal(new sandbox.TextDecoder().decode(new sandbox.TextEncoder().encode("h\u00e9")), "h\u00e9");
 assert.equal(sandbox.atob(sandbox.btoa("migo")), "migo");
 assert.throws(() => sandbox.atob("!"), (e) => e.name === "InvalidCharacterError" && e instanceof sandbox.DOMException);
 
