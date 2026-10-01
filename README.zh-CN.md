@@ -71,6 +71,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | Window 自引用 | `window`、`self`、`parent`、`top` |
 | 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`WheelEvent`、`KeyboardEvent`、`CompositionEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
 | 屏上画布 | `globalThis.canvas`(也可通过 `document.getElementById("GameCanvas")` 获取) |
+| Audio 元素 | `new Audio(src)`;`canPlayType` 按运行时能解码的格式作答(PCM WAV、MP3、Ogg Vorbis:`"probably"` / `"maybe"` / `""`),`play()` 返回 promise |
 | DOM 指针 | `PointerEvent`(`pointerId`、`pointerType`、`isPrimary`、`pressure`、`width/height` 等);`setPointerCapture` / `releasePointerCapture` / `hasPointerCapture` |
 | DOM 触摸 | `Touch`(`identifier`、`target`、`clientX/Y`、`pageX/Y`、`screenX/Y`、`radiusX/Y`、`rotationAngle`、`force`);`TouchEvent` 的 `touches` / `targetTouches` / `changedTouches` 带 `item(i)` |
 | Migo 的 V8 没有的标准全局 | `atob`、`btoa`(HTML 标准 base64,输入非法时抛 `InvalidCharacterError`)、`DOMException`(name、message、旧式 `code`)。宿主自带时不覆盖 |

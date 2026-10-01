@@ -81,6 +81,7 @@ game that *also* imports the ESM entry.
 | Window self-references | `window`, `self`, `parent`, `top` |
 | Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `WheelEvent`, `KeyboardEvent`, `CompositionEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
 | On-screen canvas | `globalThis.canvas` (also `document.getElementById("GameCanvas")`) |
+| Audio element | `new Audio(src)` with `canPlayType` answering for what the runtime decodes (PCM WAV, MP3, Ogg Vorbis: `"probably"` / `"maybe"` / `""`), and a `play()` that returns a promise |
 | DOM pointer | `PointerEvent` (`pointerId`, `pointerType`, `isPrimary`, `pressure`, `width/height`, ...); `setPointerCapture` / `releasePointerCapture` / `hasPointerCapture` |
 | DOM touch | `Touch` (`identifier`, `target`, `clientX/Y`, `pageX/Y`, `screenX/Y`, `radiusX/Y`, `rotationAngle`, `force`); `TouchEvent.touches` / `targetTouches` / `changedTouches` are lists with `item(i)` |
 | Standard globals Migo's V8 lacks | `atob`, `btoa` (HTML Standard base64, `InvalidCharacterError` on bad input), `DOMException` (name, message, legacy `code`). Published only when the host has none of its own |
