@@ -26,8 +26,9 @@ Everything below is run, unmodified, through the real macOS host by the [conform
 | Babylon.js | 9.29.0 | rendering, a lit scene, dynamic textures, pointer picking |
 | PlayCanvas | 2.22.6 | rendering, touch input |
 | Howler.js | 2.2.4 | loading, decoding, playing and ending a sound through WebAudio and through an `<audio>` element |
+| Egret | 5.4.1 | rendering (shapes, alpha and blend modes, transforms, scroll rects, canvas and file textures, text), XML assets through `DOMParser`, tweens on the frame clock |
 
-Cocos Creator, Egret and Laya are **not** in that suite: they ship their own platform glue and have not been verified here, so nothing in this README claims them.
+Cocos Creator and Laya are **not** in that suite: they ship their own platform glue and have not been verified here, so nothing in this README claims them. Egret runs on macOS and on an iPhone 12 (Performance+); its engine files are not on npm, so the suite pins them by commit and sha256 (`engines/vendor/egret.pin`).
 
 ## Install
 
@@ -100,6 +101,7 @@ game that *also* imports the ESM entry.
 | Loading | `XMLHttpRequest` (async) and `fetch` / `Headers` / `Request` / `Response` over three kinds of URL: the network (`migo.request`), `data:` and `blob:` URLs, and **the game package** -- a relative path (`assets/a.json`, `./a.png?v=3`) or an origin-relative one (`/assets/a.json`) is a file in the package, a missing one is a completed request with status 404. `Blob` / `File`, `URL.createObjectURL` (an `Image` can load one), `createImageBitmap(blob)`, `FileReader`, `TextEncoder` / `TextDecoder` (UTF-8, UTF-16LE, windows-1252, GBK), `AbortController` / `AbortSignal`; `EventTarget` takes `once`, `signal` and `handleEvent` objects. A `fetch` response has no `body` stream, which is how streaming readers detect that they must read the whole body |
 | DOM pointer | `PointerEvent` (`pointerId`, `pointerType`, `isPrimary`, `pressure`, `width/height`, ...); `setPointerCapture` / `releasePointerCapture` / `hasPointerCapture` |
 | DOM touch | `Touch` (`identifier`, `target`, `clientX/Y`, `pageX/Y`, `screenX/Y`, `radiusX/Y`, `rotationAngle`, `force`); `TouchEvent.touches` / `targetTouches` / `changedTouches` are lists with `item(i)` |
+| XML | `DOMParser` and `XMLSerializer`, for XML (`text/xml`, `application/xml`, `application/xhtml+xml`, `image/svg+xml`): a document, elements with attributes and namespaces, text, CDATA, comments and processing instructions; a document that is not well-formed answers a `<parsererror>` root, as browsers do. `text/html` is refused (`NotSupportedError`). Egret builds a parser while it loads and reads every XML asset with it; Cocos and Laya read `.fnt`, `.tmx` and `.plist` with the same pair |
 | Standard globals Migo's V8 lacks | `atob`, `btoa` (HTML Standard base64, `InvalidCharacterError` on bad input), `DOMException` (name, message, legacy `code`). Published only when the host has none of its own |
 
 ## Mapping to `migo.*`
@@ -137,6 +139,14 @@ new PIXI.Application({ view: canvas, width: canvas.width, height: canvas.height 
 new THREE.WebGLRenderer({ canvas });
 new BABYLON.Engine(canvas, true);
 new pc.Application(canvas, { graphicsDeviceOptions: { deviceTypes: ['webgl2'] } });
+```
+
+Egret makes its own canvas, and probes for WebGL on one of its own first, which the adapter would back with the presented surface before the engine's real one is made. Its own extension point for a platform that already has a screen is `egret.sys.mainCanvas`; claim the context first, with what Egret asks for (a stencil, for masks):
+
+```js
+canvas.getContext('webgl', { antialias: false, stencil: true });
+egret.sys.mainCanvas = () => canvas;
+egret.runEgret({ renderMode: 'webgl' });       // from DOMContentLoaded, as an index.html does
 ```
 
 Touches reach the canvas, `document` and `window` as DOM `TouchEvent`s whose `Touch` objects have a `target` (the canvas), `screenX/Y` and the contact ellipse; Phaser's scene-level `input.on('pointerdown')` depends on that `target`.
@@ -183,6 +193,7 @@ src/
   websocket.js      WebSocket on top of migo.connectSocket
   file-reader.js    FileReader simple impl
   intl.js           minimal Intl polyfill (published only when globalThis.Intl is absent)
+  dom-parser.js     DOMParser / XMLSerializer for XML (a well-formedness-checking parser; a parsererror document on failure)
 scripts/
   build-bundle.mjs  esbuild → dist/migo-web-adapter.bundle.js (IIFE; for prelude injection)
 tests/
@@ -193,6 +204,7 @@ tests/
   keyboard-events.test.mjs     physical keyboard -> DOM keydown/keyup forwarding
   composition-events.test.mjs  IME composition -> DOM compositionstart/update/end forwarding
   visibility-events.test.mjs   app lifecycle -> DOM Page Visibility (document.hidden, visibilitychange)
+  dom-parser.test.mjs          XML trees, entities, namespaces, parsererror documents, serialization (cross-checked against jsdom)
 ```
 
 ## Running tests
