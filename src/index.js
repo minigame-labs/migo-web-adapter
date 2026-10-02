@@ -28,6 +28,7 @@ import WebSocket from "./websocket.js";
 import FileReader from "./file-reader.js";
 import Intl from "./intl.js";
 import DOMException from "./dom-exception.js";
+import { DOMParser, XMLSerializer } from "./dom-parser.js";
 import { atob, btoa } from "./base64.js";
 import { TextEncoder, TextDecoder } from "./text-codec.js";
 import { Blob, File } from "./blob.js";
@@ -275,7 +276,8 @@ if (!globalThis.__migoWebAdapterInjected) {
   if (typeof globalThis.atob !== "function") surface.atob = atob;
   if (typeof globalThis.btoa !== "function") surface.btoa = btoa;
   // Loaders assume these: TextDecoder for JSON and glTF, Blob and fetch for assets, AbortController for cancelling them.
-  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch };
+  // DOMParser and XMLSerializer: Egret builds a parser while its web platform loads; Cocos and Laya read .fnt/.tmx/.plist with them.
+  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }
