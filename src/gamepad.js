@@ -1,9 +1,10 @@
 // W3C Gamepad API, mapped onto the runtime's `migo.*` gamepad transport.
 //
-// wx has no gamepad API, so the reference is the Web platform Migo replaces:
+// The mini-game gamepad API follows the Web one, so this is the Web shape:
 // content calls navigator.getGamepads() and listens for gamepadconnected on
 // window. The runtime already implements the hard parts (null slots, frozen
-// views, live state) in input/04_gamepad.js and exposes them on `migo` only.
+// views, live state, each pad's vibrationActuator) in input/04_gamepad.js and
+// exposes them on `migo`.
 // This module is the browser-shaped surface over that transport; it adds no
 // state of its own, because a second copy of the state could disagree with the
 // first.
