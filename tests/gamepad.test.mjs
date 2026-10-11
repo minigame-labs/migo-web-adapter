@@ -21,16 +21,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const REF = process.env.MIGO_GAMEPAD_REF || "master";
-const BASE_URL = `https://raw.githubusercontent.com/minigame-labs/migo-runtime/${REF}/engine/crates/runtime-v8/src/input/`;
+const BASE_URL = `https://raw.githubusercontent.com/minigame-labs/migo-runtime/${REF}/engine/crates/runtime-v8/src/`;
 
 // MIGO_RUNTIME_DIR names a checkout of migo-runtime to read the files from instead of fetching them (offline, or a
-// change to the engine's input code that is not on master yet).
-async function fetchSource(name) {
+// change to the engine's input code that is not on master yet). `path` is relative to the runtime's JS source root.
+async function fetchSource(path) {
   if (process.env.MIGO_RUNTIME_DIR) {
     const { readFile } = await import("node:fs/promises");
-    return readFile(join(process.env.MIGO_RUNTIME_DIR, "engine/crates/runtime-v8/src/input", name), "utf8");
+    return readFile(join(process.env.MIGO_RUNTIME_DIR, "engine/crates/runtime-v8/src", path), "utf8");
   }
-  const url = BASE_URL + name;
+  const url = BASE_URL + path;
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`could not fetch the real gamepad transport source for ref '${REF}' from ${url}: HTTP ${res.status}`);
@@ -38,21 +38,45 @@ async function fetchSource(name) {
   return res.text();
 }
 
-// 04_gamepad.js stamps events with the engine's input clock, which the engine imports as
-// `ext:host_v8_touch/00_input_clock.js` -- a specifier only the runtime's module loader resolves. The module is just
-// as dependency-free as the gamepad one, so fetch it too and point the import at the copy beside it; any other `ext:`
-// import appearing in either file is the drift this test exists to notice, so it is refused by name.
+// 04_gamepad.js imports a few engine modules by `ext:` specifiers only the runtime's module loader resolves. Each is
+// mapped here by name, and any other `ext:` import is the drift this test exists to notice, so it is refused:
+//   - the input clock and the DOMException helper are dependency-free: the real files, fetched beside it;
+//   - the timers and the visibility observer are the engine's own scheduling, stood in for by the host's timers and a
+//     visibility switch this test flips;
+//   - `ext:core/ops` is the native op table: the one op the transport calls, recording what the motors were told.
 const tmpDir = await mkdtemp(join(tmpdir(), "migo-gamepad-test-"));
-let gamepadSource = await fetchSource("04_gamepad.js");
-const clockSpecifier = "ext:host_v8_touch/00_input_clock.js";
-gamepadSource = gamepadSource.split(clockSpecifier).join("./00_input_clock.js");
+const realModules = {
+  "ext:host_v8_touch/00_input_clock.js": ["00_input_clock.js", "input/00_input_clock.js"],
+  "ext:host_v8_base/06_dom_exception.js": ["06_dom_exception.js", "base/06_dom_exception.js"],
+};
+const standIns = {
+  "ext:host_v8_web/02_timers.js": ["timers.js",
+    "export const setTimeout = globalThis.setTimeout;\nexport const clearTimeout = globalThis.clearTimeout;\n"],
+  "ext:host_v8_lifecycle/01_lifecycle.js": ["lifecycle.js",
+    "export const observers = [];\nexport function _internalObserveVisibility(observer) { observers.push(observer); }\n"],
+  "ext:core/ops": ["ops.js",
+    "export const rumbles = [];\nexport function op_gamepad_rumble(...args) { rumbles.push(args); }\n"],
+};
+let gamepadSource = await fetchSource("input/04_gamepad.js");
+for (const [specifier, [file, path]] of Object.entries(realModules)) {
+  const source = await fetchSource(path);
+  if (/from\s+["']ext:/.test(source)) {
+    throw new Error(`${path} now imports an engine module, so it can no longer be used as fetched; teach this test how`);
+  }
+  await writeFile(join(tmpDir, file), source, "utf8");
+  gamepadSource = gamepadSource.split(specifier).join(`./${file}`);
+}
+for (const [specifier, [file, source]] of Object.entries(standIns)) {
+  await writeFile(join(tmpDir, file), source, "utf8");
+  gamepadSource = gamepadSource.split(specifier).join(`./${file}`);
+}
 const otherExt = [...gamepadSource.matchAll(/from\s+["'](ext:[^"']+)["']/g)].map((m) => m[1]);
 if (otherExt.length) {
   throw new Error(`04_gamepad.js imports ${otherExt.join(", ")}, which this test cannot resolve; teach it how, rather than skipping the check`);
 }
-await writeFile(join(tmpDir, "00_input_clock.js"), await fetchSource("00_input_clock.js"), "utf8");
 await writeFile(join(tmpDir, "04_gamepad.js"), gamepadSource, "utf8");
 const runtime = await import(`file://${join(tmpDir, "04_gamepad.js")}`);
+const ops = await import(`file://${join(tmpDir, "ops.js")}`);
 await rm(tmpDir, { recursive: true, force: true });
 
 // ---- Fake migo carrying the real gamepad transport ------------------------
@@ -239,5 +263,19 @@ assert.deepEqual(
 globalThis.removeEventListener("gamepaddisconnected", loggerThrower);
 globalThis.removeEventListener("gamepaddisconnected", afterBrokenLogger);
 
+// ---- 13. Haptics pass through ----------------------------------------------
+// The pad navigator.getGamepads() returns is the runtime's, so its vibrationActuator is the runtime's too: the
+// engine times the effect and settles the promise, and the adapter adds nothing in between.
+runtime._internalTriggerGamepadConnected(1, "Rumble Pad", "standard", 4, 17, 1);
+const rumblePad = navigator.getGamepads()[1];
+assert.deepEqual([...rumblePad.vibrationActuator.effects], ["dual-rumble"], "the effects the host declared");
+assert.equal(rumblePad.vibrationActuator, runtime.getGamepads()[1].vibrationActuator, "the runtime's own actuator");
+const played = await rumblePad.vibrationActuator.playEffect("dual-rumble",
+  { duration: 10, strongMagnitude: 1, weakMagnitude: 0.5 });
+assert.equal(played, "complete", "an effect that ran its time completes");
+assert.deepEqual(ops.rumbles, [[1, 1, 0.5, 0, 0, 10]], "the motors were told once, magnitudes and duration");
+await assert.rejects(rumblePad.vibrationActuator.playEffect("trigger-rumble", { duration: 10 }),
+  (e) => e.name === "NotSupportedError", "an effect the pad does not play is refused");
+
 console.error = _realError;
-console.log("ALL GAMEPAD ASSERTIONS PASSED (12 sections)");
+console.log("ALL GAMEPAD ASSERTIONS PASSED (13 sections)");
