@@ -1,2 +1,5 @@
 node_modules/
 dist/
+
+# The engine source CI checks out for the gamepad test (see .github/workflows/ci.yml).
+.engine-source/
