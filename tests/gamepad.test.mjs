@@ -7,8 +7,10 @@
 // Importing the real module means this test fails if either side drifts.
 //
 // This adapter lives in its own repo, separate from the engine, so "import it
-// directly" means fetching it from minigame-labs/migo at test time rather
-// than a relative path within a shared tree. MIGO_GAMEPAD_REF picks the ref
+// directly" means fetching it from the engine's source repository at test time
+// rather than a relative path within a shared tree. That repository is private:
+// the fetch needs MIGO_ENGINE_TOKEN (read access to its contents), or
+// MIGO_RUNTIME_DIR pointing at a checkout. MIGO_GAMEPAD_REF picks the ref
 // (default: master); failing closed on a fetch error is the point, the same
 // way migo-examples' own namespace contract test does -- a skipped check here
 // is exactly how a real drift would go unnoticed.
@@ -21,9 +23,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const REF = process.env.MIGO_GAMEPAD_REF || "master";
-const BASE_URL = `https://raw.githubusercontent.com/minigame-labs/migo-runtime/${REF}/engine/crates/runtime-v8/src/`;
+const BASE_URL = `https://raw.githubusercontent.com/minigame-labs/migo-engine/${REF}/engine/crates/runtime-v8/src/`;
+const AUTH = process.env.MIGO_ENGINE_TOKEN ? { Authorization: `Bearer ${process.env.MIGO_ENGINE_TOKEN}` } : {};
 
-// MIGO_RUNTIME_DIR names a checkout of migo-runtime to read the files from instead of fetching them (offline, or a
+// MIGO_RUNTIME_DIR names a checkout of the engine source to read the files from instead of fetching them (offline, or a
 // change to the engine's input code that is not on master yet). `path` is relative to the runtime's JS source root.
 async function fetchSource(path) {
   if (process.env.MIGO_RUNTIME_DIR) {
@@ -31,9 +34,10 @@ async function fetchSource(path) {
     return readFile(join(process.env.MIGO_RUNTIME_DIR, "engine/crates/runtime-v8/src", path), "utf8");
   }
   const url = BASE_URL + path;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: AUTH });
   if (!res.ok) {
-    throw new Error(`could not fetch the real gamepad transport source for ref '${REF}' from ${url}: HTTP ${res.status}`);
+    const hint = process.env.MIGO_ENGINE_TOKEN ? "" : " (MIGO_ENGINE_TOKEN is not set; the engine repository is private)";
+    throw new Error(`could not fetch the real gamepad transport source for ref '${REF}' from ${url}: HTTP ${res.status}${hint}`);
   }
   return res.text();
 }

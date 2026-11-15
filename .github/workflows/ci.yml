@@ -16,4 +16,8 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
+      # The gamepad test reads the engine's input transport from its private
+      # source repository; the secret is a token with read access to it.
       - run: npm test
+        env:
+          MIGO_ENGINE_TOKEN: ${{ secrets.MIGO_ENGINE_READ_TOKEN }}

@@ -2,7 +2,7 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-A browser-style BOM/DOM adapter layered on top of the [migo](https://github.com/minigame-labs/migo) mini-game runtime. Lets games written for browser-like environments run on migo, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
+A browser-style BOM/DOM adapter layered on top of the [migo](https://github.com/minigame-labs/migo-runtime) mini-game runtime. Lets games written for browser-like environments run on migo, by mapping `window.*`, `document.*`, `Image`, `XMLHttpRequest`, etc. onto the corresponding `migo.*` APIs.
 
 The migo runtime intentionally ships **no BOM/DOM** — it offers only `migo.*` plus standard JavaScript. Browser-style globals are this adapter's job. If your content is wx-shaped instead (calls `wx.*` directly), see [`migo-wx-adapter`](https://github.com/minigame-labs/migo-wx-adapter) — the two compose freely, since they touch disjoint globals.
 
@@ -16,7 +16,7 @@ If your game uses only `migo.*` APIs directly (no `window`, no `document`), you 
 
 ## Verified engines
 
-Everything below is run, unmodified, through the real macOS host by the [conformance `engines/` suite](https://github.com/minigame-labs/migo-conformance/tree/master/engines) (pinned versions; scenes that draw known colours and read the pixels back, play taps and drags, load assets from the game package, and play sounds). A stranger can rerun it with one script.
+Everything below is run, unmodified, through the real macOS host by the conformance `engines/` suite (pinned versions; scenes that draw known colours and read the pixels back, play taps and drags, load assets from the game package, and play sounds).
 
 | Engine | Version | What is checked |
 |---|---|---|
@@ -198,7 +198,7 @@ scripts/
   build-bundle.mjs  esbuild → dist/migo-web-adapter.bundle.js (IIFE; for prelude injection)
 tests/
   adapter.test.mjs             Node simulation against a fake migo runtime
-  gamepad.test.mjs             W3C Gamepad API against the REAL runtime transport (fetched from minigame-labs/migo at test time)
+  gamepad.test.mjs             W3C Gamepad API against the REAL runtime transport (read from the engine source at test time)
   bundle.test.mjs              IIFE bundle smoke-tested in a vm.Context
   pointer-compat.test.mjs      touch + W3C compatibility-mouse event forwarding
   keyboard-events.test.mjs     physical keyboard -> DOM keydown/keyup forwarding

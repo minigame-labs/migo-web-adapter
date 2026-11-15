@@ -2,7 +2,7 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-一个浏览器风格的 BOM/DOM 适配层，构建在 [migo](https://github.com/minigame-labs/migo) 小游戏运行时之上。让为浏览器式环境编写的游戏在 migo 上运行，方式是把 `window.*`、`document.*`、`Image`、`XMLHttpRequest` 等映射到对应的 `migo.*` API 上。
+一个浏览器风格的 BOM/DOM 适配层，构建在 [migo](https://github.com/minigame-labs/migo-runtime) 小游戏运行时之上。让为浏览器式环境编写的游戏在 migo 上运行，方式是把 `window.*`、`document.*`、`Image`、`XMLHttpRequest` 等映射到对应的 `migo.*` API 上。
 
 migo 运行时刻意**不内置 BOM/DOM**——它只提供 `migo.*` 加标准 JavaScript。浏览器风格的全局对象是这个适配层的职责。如果你的内容是 wx 形态的（直接调用 `wx.*`），请看 [`migo-wx-adapter`](https://github.com/minigame-labs/migo-wx-adapter)——两者可以自由组合，因为它们各自只碰互不重叠的全局对象。
 
@@ -16,7 +16,7 @@ migo 运行时刻意**不内置 BOM/DOM**——它只提供 `migo.*` 加标准 J
 
 ## 已验证的引擎
 
-下面列出的全部由 [conformance 的 `engines/` 套件](https://github.com/minigame-labs/migo-conformance/tree/master/engines)在真实 macOS 宿主上原样运行验证(版本固定;场景绘制已知颜色并读回像素、回放点击与拖拽、从游戏包加载资源、播放声音)。陌生人用一条脚本就能复现。
+下面列出的全部由 conformance 的 `engines/` 套件在真实 macOS 宿主上原样运行验证(版本固定;场景绘制已知颜色并读回像素、回放点击与拖拽、从游戏包加载资源、播放声音)。
 
 | 引擎 | 版本 | 检查内容 |
 |---|---|---|
@@ -26,8 +26,9 @@ migo 运行时刻意**不内置 BOM/DOM**——它只提供 `migo.*` 加标准 J
 | Babylon.js | 9.29.0 | 渲染、光照场景、动态纹理、指针拾取 |
 | PlayCanvas | 2.22.6 | 渲染、触摸输入 |
 | Howler.js | 2.2.4 | 经 WebAudio 与 `<audio>` 元素两条路径加载、解码、播放并结束声音 |
+| Egret | 5.4.1 | 渲染(图形、透明度与混合模式、变换、滚动矩形、canvas 纹理与文件纹理、文本)、经 `DOMParser` 读取的 XML 资源、帧时钟驱动的缓动 |
 
-Cocos Creator、Egret 和 Laya **不在**该套件中:它们自带平台胶水代码,这里没有验证过,因此本 README 不对它们做任何声明。
+Cocos Creator 和 Laya **不在**该套件中:它们自带平台胶水代码,这里没有验证过,因此本 README 不对它们做任何声明。Egret 在 macOS 与 iPhone 12(Performance+)上运行;其引擎文件不在 npm 上,套件按 commit 与 sha256 固定(`engines/vendor/egret.pin`)。
 
 ## 安装
 
@@ -90,6 +91,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | 资源加载 | `XMLHttpRequest`(异步)与 `fetch` / `Headers` / `Request` / `Response`,支持三类 URL:网络(`migo.request`)、`data:` 与 `blob:`,以及**游戏包**——相对路径(`assets/a.json`、`./a.png?v=3`)或源相对路径(`/assets/a.json`)都读取包内文件,文件不存在是一次已完成的请求,状态 404。`Blob` / `File`、`URL.createObjectURL`(`Image` 可以加载它)、`createImageBitmap(blob)`、`FileReader`、`TextEncoder` / `TextDecoder`(UTF-8、UTF-16LE、windows-1252、GBK)、`AbortController` / `AbortSignal`;`EventTarget` 支持 `once`、`signal` 与 `handleEvent` 对象。`fetch` 的响应没有 `body` 流,流式读取的库据此得知只能整体读取 |
 | DOM 指针 | `PointerEvent`(`pointerId`、`pointerType`、`isPrimary`、`pressure`、`width/height` 等);`setPointerCapture` / `releasePointerCapture` / `hasPointerCapture` |
 | DOM 触摸 | `Touch`(`identifier`、`target`、`clientX/Y`、`pageX/Y`、`screenX/Y`、`radiusX/Y`、`rotationAngle`、`force`);`TouchEvent` 的 `touches` / `targetTouches` / `changedTouches` 带 `item(i)` |
+| XML | `DOMParser` 与 `XMLSerializer`,用于 XML(`text/xml`、`application/xml`、`application/xhtml+xml`、`image/svg+xml`):文档、带属性与命名空间的元素、文本、CDATA、注释与处理指令;格式不合法的文档返回 `<parsererror>` 根节点,与浏览器一致。`text/html` 被拒绝(`NotSupportedError`)。Egret 在加载时创建解析器并用它读取全部 XML 资源;Cocos 与 Laya 用同一对接口读取 `.fnt`、`.tmx` 与 `.plist` |
 | Migo 的 V8 没有的标准全局 | `atob`、`btoa`(HTML 标准 base64,输入非法时抛 `InvalidCharacterError`)、`DOMException`(name、message、旧式 `code`)。宿主自带时不覆盖 |
 
 ## 与 `migo.*` 的映射关系
@@ -177,7 +179,7 @@ scripts/
   build-bundle.mjs  esbuild → dist/migo-web-adapter.bundle.js (IIFE;用于前置脚本注入)
 tests/
   adapter.test.mjs             针对一个伪造 migo 运行时的 Node 模拟测试
-  gamepad.test.mjs             针对真实运行时传输层的 W3C Gamepad API 测试(测试时从 minigame-labs/migo 拉取)
+  gamepad.test.mjs             针对真实运行时传输层的 W3C Gamepad API 测试(测试时读取引擎源码)
   bundle.test.mjs              在 vm.Context 中对 IIFE 打包产物做冒烟测试
   pointer-compat.test.mjs      触摸 + W3C 兼容鼠标事件转发
   keyboard-events.test.mjs     物理键盘 → DOM keydown/keyup 转发
