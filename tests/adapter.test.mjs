@@ -148,6 +148,22 @@ assert.equal(div.getAttribute("data-foo"), "1", "an attribute is a string");
 const rect = div.getBoundingClientRect();
 assert.equal(rect.width, 390); // matches current innerWidth
 
+// 6b. What engines read to place a touch on the canvas. EaselJS subtracts the canvas's computed padding and border on
+//     every pointer event; Egret takes pageX - (rect.left + pageXOffset - documentElement.clientLeft). Each was missing,
+//     so EaselJS's handler threw and Egret's position was NaN: neither heard a tap.
+assert.equal(typeof globalThis.getComputedStyle, "function", "window.getComputedStyle exists");
+const computed = globalThis.getComputedStyle(div);
+assert.equal(computed.paddingLeft, "0px");
+assert.equal(computed.getPropertyValue("border-left-width"), "0px", "getPropertyValue takes the CSS name");
+assert.equal(computed.width, "390px", "width is the layout's, in px");
+div.style.display = "none";
+assert.equal(globalThis.getComputedStyle(div).display, "none", "an inline style the game set is reported");
+assert.equal(globalThis.document.documentElement.clientLeft, 0);
+assert.equal(div.clientTop, 0);
+assert.equal(globalThis.pageXOffset, 0);
+assert.equal(globalThis.scrollY, 0);
+assert.ok("ontouchstart" in globalThis, "a touch host's window has ontouchstart");
+
 // 7. addEventListener on document
 let docHits = 0;
 globalThis.document.addEventListener("touchstart", () => docHits++);

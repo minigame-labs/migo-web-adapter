@@ -11,6 +11,7 @@
 // One-shot: idempotent on re-entry.
 
 import * as bom from "./bom.js";
+import { getComputedStyle } from "./computed-style.js";
 import navigator from "./navigator.js";
 import location from "./location.js";
 import document from "./document.js";
@@ -247,6 +248,13 @@ if (!globalThis.__migoWebAdapterInjected) {
     screenWidth: bom.screenWidth, screenHeight: bom.screenHeight,
     devicePixelRatio: bom.devicePixelRatio,
     screen: bom.screen,
+    // Nothing scrolls: the game is the viewport. Engines add these to a touch's page coordinates.
+    pageXOffset: 0, pageYOffset: 0, scrollX: 0, scrollY: 0,
+    scrollTo() {}, scroll() {}, scrollBy() {},
+    getComputedStyle,
+    // A touch host's window has the touch handlers, as `document` already does here (navigator.maxTouchPoints is 5):
+    // `'ontouchstart' in window` is how engines tell a touch screen from a mouse.
+    ontouchstart: null, ontouchmove: null, ontouchend: null, ontouchcancel: null,
     // BOM stubs
     navigator, location,
     // DOM
