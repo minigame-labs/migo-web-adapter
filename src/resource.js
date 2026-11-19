@@ -13,6 +13,7 @@
 
 import { atob } from "./base64.js";
 import { resolveBlobURL } from "./blob-url.js";
+import { withinPackage } from "./origin.js";
 
 const MIME = {
   wav: "audio/wav", mp3: "audio/mpeg", ogg: "audio/ogg", m4a: "audio/mp4", aac: "audio/aac", flac: "audio/flac",
@@ -127,7 +128,8 @@ const lowerKeys = (headers) => {
 /// `{ url, status, statusText, headers, body }` (`body` an ArrayBuffer; `headers` lower-cased) -- a 404 is a resolution,
 /// not a rejection -- and rejects with `{ kind: "network" | "timeout" | "abort", error }`. `abort()` cancels.
 export function loadResource(request) {
-  const url = String(request.url);
+  // A URL on the game's own origin is a package path (origin.js).
+  const url = withinPackage(String(request.url));
   const method = String(request.method || "GET").toUpperCase();
   let cancel = () => {};
   const promise = new Promise((resolve, reject) => {

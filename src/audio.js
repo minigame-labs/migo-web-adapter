@@ -5,6 +5,7 @@
 
 import EventTarget from "./event-target.js";
 import DOMException from "./dom-exception.js";
+import { withinPackage } from "./origin.js";
 
 // Browser <audio>/Audio is GC-managed: when the object becomes unreachable the
 // media resource is released. Our InnerAudioContext, by contrast, is pinned by
@@ -133,7 +134,7 @@ export default class Audio extends EventTarget {
     this._readyState = 0;
     this._ended = false;
     this._error = null;
-    this._ctx.src = v;
+    this._ctx.src = withinPackage(v);
     if (v) Promise.resolve().then(() => this._fire("loadstart"));
   }
   get src() { return this._ctx.src; }

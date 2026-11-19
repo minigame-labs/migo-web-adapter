@@ -35,6 +35,7 @@ import { TextEncoder, TextDecoder } from "./text-codec.js";
 import { Blob, File } from "./blob.js";
 import { AbortController, AbortSignal } from "./abort.js";
 import { Headers, Request, Response, fetch } from "./fetch.js";
+import Worker from "./worker.js";
 import { installObjectURLs } from "./blob-url.js";
 import { wrapCreateImageBitmap } from "./image.js";
 import { Touch, touchList } from "./touch.js";
@@ -285,7 +286,8 @@ if (!globalThis.__migoWebAdapterInjected) {
   if (typeof globalThis.btoa !== "function") surface.btoa = btoa;
   // Loaders assume these: TextDecoder for JSON and glTF, Blob and fetch for assets, AbortController for cancelling them.
   // DOMParser and XMLSerializer: Egret builds a parser while its web platform loads; Cocos and Laya read .fnt/.tmx/.plist with them.
-  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer };
+  // Worker: PixiJS v8 loads textures through one; three.js's and Babylon's decoders run in one (worker.js).
+  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }
