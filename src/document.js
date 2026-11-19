@@ -3,11 +3,12 @@
 // other tags return a plain HTMLElement. getElementById/querySelector return
 // null unless asking for the global canvas (engines do `getElementById('GameCanvas')`).
 
-import HTMLElement from "./element.js";
+import HTMLElement, { HTMLVideoElement } from "./element.js";
 import Image from "./image.js";
 import Canvas from "./canvas.js";
 import Audio from "./audio.js";
 import location from "./location.js";
+import { BASE_URI } from "./origin.js";
 import EventTarget from "./event-target.js";
 import { byTagName, byClassName, byId, queryAll, queryFirst } from "./query.js";
 
@@ -33,6 +34,8 @@ const document = {
   hidden: false,
   documentElement,
   location,
+  // The game's origin root (origin.js): what a relative asset path is resolved against.
+  baseURI: BASE_URI,
   ontouchstart: null,
   ontouchmove: null,
   ontouchend: null,
@@ -74,6 +77,7 @@ const document = {
     }
     if (t === "img" || t === "image") return new Image();
     if (t === "audio") return new Audio();
+    if (t === "video") return new HTMLVideoElement();
     return new HTMLElement(tag);
   },
 

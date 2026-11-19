@@ -4,6 +4,7 @@
 // `src` still reads back as the blob URL so the code that revokes it (Phaser does, after `load`) finds it.
 
 import { resolveBlobURL, blobToDataURL } from "./blob-url.js";
+import { withinPackage } from "./origin.js";
 
 function interceptBlobSources(image) {
   const proto = Object.getPrototypeOf(image);
@@ -21,6 +22,10 @@ function interceptBlobSources(image) {
         const blob = resolveBlobURL(url);
         // A revoked or foreign blob URL loads nothing: the runtime is given a source it cannot open, and says so as an error.
         descriptor.set.call(this, blob ? blobToDataURL(blob) : url);
+      } else if (withinPackage(url) !== url) {
+        // The game's own origin (origin.js): the runtime is given the package path, and `src` reads back as set.
+        shown = url;
+        descriptor.set.call(this, withinPackage(url));
       } else {
         shown = null;
         descriptor.set.call(this, value);

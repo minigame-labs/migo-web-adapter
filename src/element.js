@@ -7,6 +7,8 @@ import { pointerCaptureMethods } from "./pointer.js";
 import { ClassList } from "./class-list.js";
 import { byTagName, byClassName, byId, queryAll, queryFirst, matches, closest } from "./query.js";
 import EventTarget from "./event-target.js";
+import DOMException from "./dom-exception.js";
+import { withinPackage } from "./origin.js";
 
 // Browser boot pages commonly load the engine/game via a `<script src>` that
 // webpack/rollup emit (e.g. Phaser/Egret HTML output: an index.html whose only
@@ -22,7 +24,7 @@ function maybeLoadScript(node) {
   if (!node || node.tagName !== "SCRIPT" || !node.src || node._migoLoaded) return;
   node._migoLoaded = true;
   Promise.resolve().then(() => {
-    const src = String(node.src);
+    const src = withinPackage(String(node.src));
     try {
       if (/^(https?:)?\/\//i.test(src) || /^data:/i.test(src)) {
         console.warn("[migo-web-adapter] refusing to load non-local script:", src);
@@ -96,6 +98,12 @@ export class Node extends EventTarget {
   }
 
   cloneNode() { return null; }
+
+  // ChildNode.remove(): out of its parent, if it has one. PixiJS v8 removes the elements it created this way (a
+  // detached element is a no-op, as in a browser), and a game whose frame callback called it threw on every frame.
+  remove() {
+    if (this.parentNode) this.parentNode.removeChild(this);
+  }
 
   // Lookups in this node's own subtree (query.js).
   getElementsByTagName(name) { return byTagName(this, name); }
@@ -219,12 +227,65 @@ export class HTMLAudioElement extends HTMLElement {
   constructor() { super("audio"); }
 }
 
+// A media element this adapter cannot play. Sound is the Audio class's (audio.js, through the runtime's decoders); a
+// <video> has no backing here, so it says so the way a browser says it about a format it lacks, instead of missing the
+// methods: canPlayType answers "" for every type, a source fails with MEDIA_ERR_SRC_NOT_SUPPORTED, and play() rejects.
+// PixiJS v8 asks a <video> what it can play while it sets up its loaders; with no canPlayType that rejection stopped
+// its asset system, and the game it belonged to never left its loading screen.
+const MEDIA_ERR_SRC_NOT_SUPPORTED = 4;
 export class HTMLMediaElement extends HTMLElement {
-  constructor(tag = "media") { super(tag); }
-}
+  constructor(tag = "media") {
+    super(tag);
+    this._src = "";
+    this.error = null;
+    this.paused = true;
+    this.ended = false;
+    this.currentTime = 0;
+    this.duration = NaN;
+    this.muted = false;
+    this.volume = 1;
+    this.loop = false;
+    this.autoplay = false;
+    this.preload = "auto";
+    this.crossOrigin = null;
+  }
 
-export class HTMLVideoElement extends HTMLElement {
-  constructor() { super("video"); }
+  get readyState() { return 0; } // HAVE_NOTHING
+  get networkState() { return this._src ? 3 : 0; } // NETWORK_NO_SOURCE once a source was refused, else NETWORK_EMPTY
+  get currentSrc() { return ""; }
+  get src() { return this._src; }
+  set src(value) {
+    this._src = String(value);
+    if (this._src) this._refuse();
+  }
+
+  canPlayType(_type) { return ""; }
+  load() { if (this._src) this._refuse(); }
+  pause() {}
+  play() {
+    return Promise.reject(new DOMException("this media element has no playback here", "NotSupportedError"));
+  }
+
+  // The source's failure, after the call that set it returns, as a browser's media element reports it.
+  _refuse() {
+    setTimeout(() => {
+      this.error = { code: MEDIA_ERR_SRC_NOT_SUPPORTED, message: "no playback for this media element" };
+      const event = { type: "error", target: this, currentTarget: this };
+      if (typeof this.onerror === "function") this.onerror(event);
+      this.dispatchEvent(event);
+    }, 0);
+  }
+}
+HTMLMediaElement.MEDIA_ERR_SRC_NOT_SUPPORTED = MEDIA_ERR_SRC_NOT_SUPPORTED;
+
+export class HTMLVideoElement extends HTMLMediaElement {
+  constructor() {
+    super("video");
+    this.videoWidth = 0;
+    this.videoHeight = 0;
+    this.playsInline = false;
+    this.poster = "";
+  }
 }
 
 // Pointer capture on every element, as engines call it on whatever they were handed (pointer.js).

@@ -1,6 +1,8 @@
 // location stub. The mini-game runtime has no real URL; engines that read
 // location.href usually only check it's a string ending in .js.
 
+import { ORIGIN } from "./origin.js";
+
 const location = {
   href: "game.js",
   protocol: "https:",
@@ -10,7 +12,7 @@ const location = {
   pathname: "/game.js",
   search: "",
   hash: "",
-  origin: "https://game",
+  origin: ORIGIN,
   reload() {},
   replace() {},
   assign() {},
