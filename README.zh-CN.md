@@ -93,6 +93,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | DOM 触摸 | `Touch`(`identifier`、`target`、`clientX/Y`、`pageX/Y`、`screenX/Y`、`radiusX/Y`、`rotationAngle`、`force`);`TouchEvent` 的 `touches` / `targetTouches` / `changedTouches` 带 `item(i)` |
 | XML | `DOMParser` 与 `XMLSerializer`,用于 XML(`text/xml`、`application/xml`、`application/xhtml+xml`、`image/svg+xml`):文档、带属性与命名空间的元素、文本、CDATA、注释与处理指令;格式不合法的文档返回 `<parsererror>` 根节点,与浏览器一致。`text/html` 被拒绝(`NotSupportedError`)。Egret 在加载时创建解析器并用它读取全部 XML 资源;Cocos 与 Laya 用同一对接口读取 `.fnt`、`.tmx` 与 `.plist` |
 | 网页字体 | `new FontFace(family, source, descriptors)`——`source` 是 CSS 的 `src` 列表(`url(...) format(...)`,按顺序尝试;`local(...)` 跳过)或字体字节——以及 `load()`、`loaded`、`status`;`document.fonts`(`FontFaceSet`:`add`、`delete`、`has`、`clear`、迭代、`load(font)`、`check(font)`、`ready`、`status`,`loading` / `loadingdone` / `loadingerror` 事件)。字体在加载时以其 family 经 `migo.loadFont` 注册(TTF、OTF、WOFF、WOFF2):包内 URL 直接按路径,网络、`data:`、`blob:` URL 或字节经临时文件。已加载的字体不论是否在 `document.fonts` 里都能用于绘制,`delete` 也不会注销它 |
+| 流 | `ReadableStream`(默认 reader、底层源的 start / pull / cancel、`tee`、异步迭代)以及基于它的 `Response.body` / `Request.body`:边到达边读取的 body,和由流构成的 body(Godot 的 web 加载器、three.js 的 FileLoader);克隆流式 body 时做 tee。`ProgressEvent`。`isSecureContext` 为 true(页面源是 `https://game`),`crossOriginIsolated` 为 false |
 | Migo 的 V8 没有的标准全局 | `atob`、`btoa`(HTML 标准 base64,输入非法时抛 `InvalidCharacterError`)、`DOMException`(name、message、旧式 `code`)。宿主自带时不覆盖 |
 
 ## 与 `migo.*` 的映射关系

@@ -171,7 +171,7 @@ await test("fetch: package file, text, json, arrayBuffer, blob, headers", async 
   assert.equal(res.status, 200);
   assert.equal(res.url, "data/a b.json");
   assert.equal(res.headers.get("Content-Type"), "application/json");
-  assert.equal("body" in res, false, "no ReadableStream body: streaming readers detect that and read the whole body");
+  assert.equal("body" in res, true, "a body a streaming reader can read (streams.test.mjs reads it)");
   assert.deepEqual(await res.clone().json(), { hello: "wörld" });
   assert.equal(res.bodyUsed, false);
   assert.equal(await res.text(), '{"hello":"wörld"}');
