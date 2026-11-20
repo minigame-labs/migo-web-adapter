@@ -28,7 +28,7 @@ function decodeUtf8(bytes) {
 }
 
 /// The source of the script `url` names, or a thrown Error saying why there is none.
-function readScript(url) {
+export function readScript(url) {
   const text = withinPackage(String(url));
   if (/^blob:/i.test(text)) {
     const blob = resolveBlobURL(text);
