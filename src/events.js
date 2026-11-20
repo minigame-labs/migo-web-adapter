@@ -19,6 +19,17 @@ export class Event {
   stopImmediatePropagation() { this._stopImmediate = true; }
 }
 
+// ProgressEvent: how a page is told a load's progress. three.js's FileLoader makes one for every chunk it reads from a
+// streamed body; without the constructor that load ended in a ReferenceError.
+export class ProgressEvent extends Event {
+  constructor(type, init = {}) {
+    super(type, init);
+    this.lengthComputable = !!init.lengthComputable;
+    this.loaded = Number(init.loaded) || 0;
+    this.total = Number(init.total) || 0;
+  }
+}
+
 export class TouchEvent extends Event {
   constructor(type, init = {}) {
     super(type, init);

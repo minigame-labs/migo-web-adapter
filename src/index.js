@@ -18,7 +18,7 @@ import document from "./document.js";
 import HTMLElement, { Node, Element, HTMLImageElement, HTMLCanvasElement,
                        HTMLAudioElement, HTMLMediaElement, HTMLVideoElement } from "./element.js";
 import EventTarget from "./event-target.js";
-import { Event, TouchEvent, MouseEvent, PointerEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent } from "./events.js";
+import { Event, TouchEvent, MouseEvent, PointerEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent, ProgressEvent } from "./events.js";
 import { GamepadEvent, connectGamepadEvents } from "./gamepad.js";
 import Image from "./image.js";
 import Canvas from "./canvas.js";
@@ -37,6 +37,7 @@ import { AbortController, AbortSignal } from "./abort.js";
 import { Headers, Request, Response, fetch } from "./fetch.js";
 import Worker from "./worker.js";
 import { FontFace, FontFaceSet, FontFaceSetLoadEvent } from "./font-face.js";
+import { ReadableStream, ReadableStreamDefaultReader } from "./streams.js";
 import { installDisplay } from "./display.js";
 import { installObjectURLs } from "./blob-url.js";
 import { wrapCreateImageBitmap } from "./image.js";
@@ -253,6 +254,9 @@ if (!globalThis.__migoWebAdapterInjected) {
     screen: bom.screen,
     // Nothing scrolls: the game is the viewport. Engines add these to a touch's page coordinates.
     pageXOffset: 0, pageYOffset: 0, scrollX: 0, scrollY: 0,
+    // The page's origin is https://game (origin.js): a secure context, as an https page is. Not cross-origin isolated:
+    // no host sends the headers that would make SharedArrayBuffer a page's to use.
+    isSecureContext: true, crossOriginIsolated: false,
     scrollTo() {}, scroll() {}, scrollBy() {},
     getComputedStyle,
     // A touch host's window has the touch handlers, as `document` already does here (navigator.maxTouchPoints is 5):
@@ -290,7 +294,8 @@ if (!globalThis.__migoWebAdapterInjected) {
   // DOMParser and XMLSerializer: Egret builds a parser while its web platform loads; Cocos and Laya read .fnt/.tmx/.plist with them.
   // Worker: PixiJS v8 loads textures through one; three.js's and Babylon's decoders run in one (worker.js).
   // FontFace: PixiJS's web-font loader, and any game that loads a font the way a page does (font-face.js).
-  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent };
+  // ReadableStream: a body read as it arrives, and a body made of one (Godot's loader, three.js's FileLoader; streams.js).
+  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }
