@@ -36,6 +36,7 @@ import { Blob, File } from "./blob.js";
 import { AbortController, AbortSignal } from "./abort.js";
 import { Headers, Request, Response, fetch } from "./fetch.js";
 import Worker from "./worker.js";
+import { FontFace, FontFaceSet, FontFaceSetLoadEvent } from "./font-face.js";
 import { installDisplay } from "./display.js";
 import { installObjectURLs } from "./blob-url.js";
 import { wrapCreateImageBitmap } from "./image.js";
@@ -288,7 +289,8 @@ if (!globalThis.__migoWebAdapterInjected) {
   // Loaders assume these: TextDecoder for JSON and glTF, Blob and fetch for assets, AbortController for cancelling them.
   // DOMParser and XMLSerializer: Egret builds a parser while its web platform loads; Cocos and Laya read .fnt/.tmx/.plist with them.
   // Worker: PixiJS v8 loads textures through one; three.js's and Babylon's decoders run in one (worker.js).
-  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker };
+  // FontFace: PixiJS's web-font loader, and any game that loads a font the way a page does (font-face.js).
+  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }

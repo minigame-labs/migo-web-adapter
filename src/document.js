@@ -10,6 +10,7 @@ import Audio from "./audio.js";
 import location from "./location.js";
 import { BASE_URI } from "./origin.js";
 import EventTarget from "./event-target.js";
+import { FontFaceSet } from "./font-face.js";
 import { byTagName, byClassName, byId, queryAll, queryFirst } from "./query.js";
 
 const _docTarget = new EventTarget();
@@ -36,6 +37,8 @@ const document = {
   location,
   // The game's origin root (origin.js): what a relative asset path is resolved against.
   baseURI: BASE_URI,
+  // The document's FontFaceSet (font-face.js): PixiJS's web-font loader adds the faces it loads here.
+  fonts: new FontFaceSet(),
   ontouchstart: null,
   ontouchmove: null,
   ontouchend: null,
