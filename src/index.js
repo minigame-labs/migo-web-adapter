@@ -36,6 +36,7 @@ import { Blob, File } from "./blob.js";
 import { AbortController, AbortSignal } from "./abort.js";
 import { Headers, Request, Response, fetch } from "./fetch.js";
 import Worker from "./worker.js";
+import { installDisplay } from "./display.js";
 import { installObjectURLs } from "./blob-url.js";
 import { wrapCreateImageBitmap } from "./image.js";
 import { Touch, touchList } from "./touch.js";
@@ -326,7 +327,11 @@ if (!globalThis.__migoWebAdapterInjected) {
     globalThis.dispatchEvent = (e) => document.dispatchEvent(e);
   }
 
-  // 6. DOM lifecycle events. Browser-targeted engines commonly boot from
+  // 6. What the window shows: the canvases in the document (display.js). The page's frame callbacks run here, so the
+  //    screen can show a canvas the engine put in the document once they have drawn.
+  installDisplay(globalThis, document);
+
+  // 7. DOM lifecycle events. Browser-targeted engines commonly boot from
   //    `window.addEventListener('load', ...)` or `DOMContentLoaded` (e.g.
   //    Phaser's game entry is `window.addEventListener('load', () => new
   //    Phaser.Game(cfg))`). A real browser fires these AFTER a `<script defer>`
