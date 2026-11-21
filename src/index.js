@@ -41,6 +41,7 @@ import { ReadableStream, ReadableStreamDefaultReader } from "./streams.js";
 import { installDisplay } from "./display.js";
 import { installObjectURLs } from "./blob-url.js";
 import { installAudioWorklet } from "./audio-worklet.js";
+import { installCrypto } from "./crypto.js";
 import { wrapCreateImageBitmap } from "./image.js";
 import { Touch, touchList } from "./touch.js";
 import { createPointerBridge, installPointerCapture, pointerCaptureMethods } from "./pointer.js";
@@ -299,6 +300,14 @@ if (!globalThis.__migoWebAdapterInjected) {
   const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
+  }
+  // crypto.getRandomValues / randomUUID: content calls them synchronously (Emscripten's /dev/urandom and getentropy --
+  // Godot's mbedTLS entropy -- uuid, nanoid); the platform's random source answers through a callback, so they come from
+  // a ChaCha20 generator keyed from it (crypto.js).
+  const random = installCrypto(globalThis);
+  if (random) {
+    surface.crypto = random.crypto;
+    if (typeof globalThis.Crypto === "undefined") surface.Crypto = random.Crypto;
   }
   // AudioWorklet: the platform's WebAudioContext has none; Godot 4's web export loads a processor whatever its audio
   // driver. Run on the runtime's ScriptProcessorNode (audio-worklet.js); AudioWorkletNode is the window global.
