@@ -42,6 +42,7 @@ import { installDisplay } from "./display.js";
 import { installObjectURLs } from "./blob-url.js";
 import { installAudioWorklet } from "./audio-worklet.js";
 import { installCrypto } from "./crypto.js";
+import { CSSStyleDeclaration } from "./css-style.js";
 import { wrapCreateImageBitmap } from "./image.js";
 import { Touch, touchList } from "./touch.js";
 import { createPointerBridge, installPointerCapture, pointerCaptureMethods } from "./pointer.js";
@@ -297,7 +298,7 @@ if (!globalThis.__migoWebAdapterInjected) {
   // Worker: PixiJS v8 loads textures through one; three.js's and Babylon's decoders run in one (worker.js).
   // FontFace: PixiJS's web-font loader, and any game that loads a font the way a page does (font-face.js).
   // ReadableStream: a body read as it arrives, and a body made of one (Godot's loader, three.js's FileLoader; streams.js).
-  const standard = { TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent };
+  const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }

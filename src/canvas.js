@@ -5,6 +5,7 @@
 
 import { installPointerCapture } from "./pointer.js";
 import { ClassList } from "./class-list.js";
+import { styleDeclaration } from "./css-style.js";
 
 export default function Canvas() {
   if (typeof migo.createCanvas !== "function") {
@@ -21,6 +22,13 @@ export default function Canvas() {
   // Pointer capture is bookkeeping here (every event goes to the one canvas) but engines call it.
   installPointerCapture(c);
   installElementMembers(c);
+  // The runtime's canvas has a plain object for a style (Phaser's scale manager writes margins to it); make it a
+  // CSSStyleDeclaration holding the same, so setProperty and cssText work on a canvas as on any element.
+  try {
+    c.style = styleDeclaration(c.style);
+  } catch (_) {
+    // a style the runtime made read-only stays as it is
+  }
   return c;
 }
 

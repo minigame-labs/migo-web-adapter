@@ -3,6 +3,7 @@
 // appendChild / removeChild / parentNode during canvas setup. We track
 // parent + children just well enough to make those calls non-throwing.
 
+import { CSSStyleDeclaration } from "./css-style.js";
 import { pointerCaptureMethods } from "./pointer.js";
 import { ClassList } from "./class-list.js";
 import { byTagName, byClassName, byId, queryAll, queryFirst, matches, closest } from "./query.js";
@@ -129,7 +130,7 @@ export class Node extends EventTarget {
 export class Element extends Node {
   constructor() {
     super();
-    this.style = {};
+    this.style = new CSSStyleDeclaration();
     this.classList = new ClassList(this);
     this.className = "";
     this.id = "";
@@ -162,7 +163,7 @@ export default class HTMLElement extends Element {
     (this._attrs || (this._attrs = new Map())).set(key, text);
     if (key === "class") this.className = text;
     else if (key === "id") this.id = text;
-    else if (key === "style") { for (const rule of text.split(";")) { const colon = rule.indexOf(":"); if (colon > 0) this.style[rule.slice(0, colon).trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = rule.slice(colon + 1).trim(); } }
+    else if (key === "style") this.style.cssText = text;
     else if (key.startsWith("data-")) this.dataset[key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = text;
     else if (/^[a-z_$][a-z0-9_$]*$/.test(key)) this[key] = text;
   }
