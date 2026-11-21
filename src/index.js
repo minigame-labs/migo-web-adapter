@@ -40,6 +40,7 @@ import { FontFace, FontFaceSet, FontFaceSetLoadEvent } from "./font-face.js";
 import { ReadableStream, ReadableStreamDefaultReader } from "./streams.js";
 import { installDisplay } from "./display.js";
 import { installObjectURLs } from "./blob-url.js";
+import { installAudioWorklet } from "./audio-worklet.js";
 import { wrapCreateImageBitmap } from "./image.js";
 import { Touch, touchList } from "./touch.js";
 import { createPointerBridge, installPointerCapture, pointerCaptureMethods } from "./pointer.js";
@@ -299,6 +300,10 @@ if (!globalThis.__migoWebAdapterInjected) {
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }
+  // AudioWorklet: the platform's WebAudioContext has none; Godot 4's web export loads a processor whatever its audio
+  // driver. Run on the runtime's ScriptProcessorNode (audio-worklet.js); AudioWorkletNode is the window global.
+  const worklet = installAudioWorklet(globalThis);
+  if (worklet.AudioWorkletNode && typeof globalThis.AudioWorkletNode === "undefined") surface.AudioWorkletNode = worklet.AudioWorkletNode;
   // `URL.createObjectURL` throws in the runtime's URL; Phaser 3 loads all its images through it. And `createImageBitmap`
   // takes a Blob (Pixi: fetch -> blob -> createImageBitmap).
   installObjectURLs(globalThis.URL);
