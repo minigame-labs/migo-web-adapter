@@ -3,6 +3,7 @@
 // other tags return a plain HTMLElement. getElementById/querySelector return
 // null unless asking for the global canvas (engines do `getElementById('GameCanvas')`).
 
+import { CSSStyleDeclaration } from "./css-style.js";
 import HTMLElement, { HTMLVideoElement } from "./element.js";
 import Image from "./image.js";
 import Canvas from "./canvas.js";
@@ -43,7 +44,7 @@ const document = {
   ontouchmove: null,
   ontouchend: null,
   ontouchcancel: null,
-  style: {},
+  style: new CSSStyleDeclaration(),
 
   head,
   body,
