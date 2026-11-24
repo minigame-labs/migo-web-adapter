@@ -6,6 +6,7 @@
 import { installPointerCapture } from "./pointer.js";
 import { ClassList } from "./class-list.js";
 import { styleDeclaration } from "./css-style.js";
+import { insertAdjacentMembers } from "./element.js";
 
 export default function Canvas() {
   if (typeof migo.createCanvas !== "function") {
@@ -70,6 +71,7 @@ function installElementMembers(c) {
   define("className", { value: "", writable: true });
   define("classList", { get() { return this._classList || (this._classList = new ClassList(this)); } });
   define("contains", { value(other) { return other === this; }, writable: true });
+  for (const [name, value] of Object.entries(insertAdjacentMembers)) define(name, { value, writable: true });
   define("hasAttribute", { value(name) { return typeof this.getAttribute === "function" && this.getAttribute(name) != null; }, writable: true });
   define("focus", { value() { if (globalThis.document) globalThis.document.activeElement = this; }, writable: true });
   define("blur", {

@@ -10,6 +10,7 @@ import { byTagName, byClassName, byId, queryAll, queryFirst, matches, closest } 
 import EventTarget from "./event-target.js";
 import DOMException from "./dom-exception.js";
 import { withinPackage } from "./origin.js";
+import { parseHtmlFragment } from "./html-fragment.js";
 
 // Browser boot pages commonly load the engine/game via a `<script src>` that
 // webpack/rollup emit (e.g. Phaser/Egret HTML output: an index.html whose only
@@ -127,6 +128,75 @@ export class Node extends EventTarget {
   }
 }
 
+// Element.insertAdjacentHTML, insertAdjacentElement and insertAdjacentText (DOM Parsing and Serialization 2.4, DOM 4.9),
+// for the adapter's elements and the host's canvases alike. Defold's loader puts its progress bar after the canvas with
+// `canvas.insertAdjacentHTML("afterend", ...)`; without it the start-up script threw and the engine was never fetched.
+const ADJACENT_POSITIONS = ["beforebegin", "afterbegin", "beforeend", "afterend"];
+
+function adjacentPosition(method, where) {
+  const position = String(where).toLowerCase();
+  if (!ADJACENT_POSITIONS.includes(position)) {
+    throw new DOMException(`Failed to execute '${method}' on 'Element': The value provided ('${where}') is not one of ` +
+      "'beforeBegin', 'afterBegin', 'beforeEnd', or 'afterEnd'.", "SyntaxError");
+  }
+  return position;
+}
+
+// A node that can hold children: the adapter's own, or a host canvas given the list a <canvas> has for its fallback content.
+function withChildren(node) {
+  if (!Array.isArray(node.children)) {
+    const children = [];
+    Object.defineProperty(node, "children", { value: children, configurable: true, writable: true });
+    if (!("childNodes" in node)) Object.defineProperty(node, "childNodes", { value: children, configurable: true, writable: true });
+  }
+  return node;
+}
+
+const appendChildTo = (parent, child) => Node.prototype.appendChild.call(withChildren(parent), child);
+
+// Where `position` puts nodes relative to `target`: the parent they go into and the node they go before (null: the end).
+// Null when the position is outside the target and it has no parent to hold them.
+function adjacentSlot(target, position) {
+  if (position === "afterbegin") return { parent: withChildren(target), before: withChildren(target).children[0] || null };
+  if (position === "beforeend") return { parent: withChildren(target), before: null };
+  const parent = target.parentNode;
+  if (!parent || parent.nodeType === 9) return null;
+  const siblings = withChildren(parent).children;
+  if (position === "beforebegin") return { parent, before: target };
+  return { parent, before: siblings[siblings.indexOf(target) + 1] || null };
+}
+
+// Node's own methods, called on the parent: a host canvas has neither of its own.
+const insertInSlot = (slot, node) => (slot.before
+  ? Node.prototype.insertBefore.call(slot.parent, node, slot.before)
+  : Node.prototype.appendChild.call(slot.parent, node));
+
+export const insertAdjacentMembers = {
+  insertAdjacentHTML(position, text) {
+    const where = adjacentPosition("insertAdjacentHTML", position);
+    const slot = adjacentSlot(this, where);
+    if (!slot) {
+      throw new DOMException("Failed to execute 'insertAdjacentHTML' on 'Element': The element has no parent.", "NoModificationAllowedError");
+    }
+    for (const node of parseHtmlFragment(String(text), globalThis.document, appendChildTo)) insertInSlot(slot, node);
+  },
+  insertAdjacentElement(position, element) {
+    const where = adjacentPosition("insertAdjacentElement", position);
+    if (!element || typeof element !== "object" || element.nodeType !== 1) {
+      throw new TypeError("Failed to execute 'insertAdjacentElement' on 'Element': parameter 2 is not of type 'Element'.");
+    }
+    const slot = adjacentSlot(this, where);
+    if (!slot) return null;
+    insertInSlot(slot, element);
+    return element;
+  },
+  insertAdjacentText(position, data) {
+    const where = adjacentPosition("insertAdjacentText", position);
+    const slot = adjacentSlot(this, where);
+    if (slot) insertInSlot(slot, globalThis.document.createTextNode(String(data)));
+  },
+};
+
 export class Element extends Node {
   constructor() {
     super();
@@ -140,6 +210,9 @@ export class Element extends Node {
     this.scrollLeft = 0;
     this.scrollTop = 0;
   }
+
+  // ELEMENT_NODE, as Node.prototype.nodeType answers for an element (a host canvas carries the same, canvas.js).
+  get nodeType() { return 1; }
 }
 
 export default class HTMLElement extends Element {
@@ -193,6 +266,9 @@ export default class HTMLElement extends Element {
   focus() {}
   blur() {}
   click() {}
+}
+for (const [name, value] of Object.entries(insertAdjacentMembers)) {
+  Object.defineProperty(HTMLElement.prototype, name, { value, writable: true, configurable: true });
 }
 
 export class HTMLImageElement extends HTMLElement {
