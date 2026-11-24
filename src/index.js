@@ -38,6 +38,7 @@ import { Headers, Request, Response, fetch } from "./fetch.js";
 import Worker from "./worker.js";
 import { FontFace, FontFaceSet, FontFaceSetLoadEvent } from "./font-face.js";
 import { ReadableStream, ReadableStreamDefaultReader } from "./streams.js";
+import { MediaQueryList, createMatchMedia } from "./match-media.js";
 import { installDisplay } from "./display.js";
 import { installObjectURLs } from "./blob-url.js";
 import { installAudioWorklet } from "./audio-worklet.js";
@@ -301,6 +302,12 @@ if (!globalThis.__migoWebAdapterInjected) {
   const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
+  }
+  // matchMedia: Defold's loader watches the pixel ratio through one, and engines size their UI by orientation and width
+  // (match-media.js). Answered against this window's metrics.
+  if (typeof globalThis.matchMedia !== "function") {
+    surface.matchMedia = createMatchMedia(globalThis);
+    surface.MediaQueryList = MediaQueryList;
   }
   // crypto.getRandomValues / randomUUID: content calls them synchronously (Emscripten's /dev/urandom and getentropy --
   // Godot's mbedTLS entropy -- uuid, nanoid); the platform's random source answers through a callback, so they come from

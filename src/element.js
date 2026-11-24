@@ -62,6 +62,12 @@ export class Node extends EventTarget {
     this.ownerDocument = null;
   }
 
+  // The parent, when it is an element (Defold's loader removes its progress bar through it).
+  get parentElement() {
+    const parent = this.parentNode;
+    return parent && parent.nodeType === 1 ? parent : null;
+  }
+
   // The root of the tree this node is in: the document when it is attached under it, else the topmost ancestor
   // (the node itself when it has none). three.js's OrbitControls asks it to find where to listen for pointer-up.
   getRootNode() {
