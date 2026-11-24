@@ -71,9 +71,15 @@ const document = {
       // onscreen surface. Engines that instead reuse the global `canvas`
       // (Pixi/Cocos) claim it before this fires and are unaffected;
       // feature-detection canvases are created while the script loads, before
-      // the document is ready.
+      // the document is ready. And a page that already has a canvas of its own
+      // in its document has its display canvas: a canvas it makes later is a
+      // probe or a buffer -- Defold's loader checks for WebGL with one once its
+      // assets have arrived -- and handed the screen it would hold the screen's
+      // context, so the composite (display.js) could never show the page's
+      // canvas on it.
       if (this._domReady && !this._mainCanvasRouted
-          && globalThis.canvas && !globalThis.canvas._context) {
+          && globalThis.canvas && !globalThis.canvas._context
+          && this.getElementsByTagName("canvas").length === 0) {
         this._mainCanvasRouted = true;
         return globalThis.canvas;
       }
