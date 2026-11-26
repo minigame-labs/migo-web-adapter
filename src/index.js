@@ -33,6 +33,7 @@ import { DOMParser, XMLSerializer } from "./dom-parser.js";
 import { ScreenOrientation } from "./screen-orientation.js";
 import { Window, adoptWindowPrototype } from "./window.js";
 import { ResizeObserver, ResizeObserverEntry, ResizeObserverSize, requestResizeCheck } from "./resize-observer.js";
+import { IntersectionObserver, IntersectionObserverEntry, requestIntersectionCheck } from "./intersection-observer.js";
 import {
   createIndexedDB, fileStorage, IDBFactory, IDBDatabase, IDBTransaction, IDBObjectStore, IDBIndex, IDBCursor,
   IDBCursorWithValue, IDBKeyRange, IDBRequest, IDBOpenDBRequest, IDBVersionChangeEvent, DOMStringList,
@@ -309,7 +310,7 @@ if (!globalThis.__migoWebAdapterInjected) {
   // Worker: PixiJS v8 loads textures through one; three.js's and Babylon's decoders run in one (worker.js).
   // FontFace: PixiJS's web-font loader, and any game that loads a font the way a page does (font-face.js).
   // ReadableStream: a body read as it arrives, and a body made of one (Godot's loader, three.js's FileLoader; streams.js).
-  const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent, ScreenOrientation, ResizeObserver, ResizeObserverEntry, ResizeObserverSize };
+  const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent, ScreenOrientation, ResizeObserver, ResizeObserverEntry, ResizeObserverSize, IntersectionObserver, IntersectionObserverEntry };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }
@@ -384,6 +385,7 @@ if (!globalThis.__migoWebAdapterInjected) {
   installDisplay(globalThis, document);
   // A resize of the window is a size an observed element may have changed with (resize-observer.js).
   globalThis.addEventListener("resize", requestResizeCheck);
+  globalThis.addEventListener("resize", requestIntersectionCheck);
 
   // 7. DOM lifecycle events. Browser-targeted engines commonly boot from
   //    `window.addEventListener('load', ...)` or `DOMContentLoaded` (e.g.

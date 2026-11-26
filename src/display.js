@@ -1,5 +1,7 @@
 import { deliverResizeObservations, setRenderingUpdate } from "./resize-observer.js";
+import { updateIntersectionObservations, setIntersectionRenderingUpdate } from "./intersection-observer.js";
 import { reportException } from "./report.js";
+import { boxOf, isCanvas } from "./layout.js";
 
 // What the window shows: the canvases in the document.
 //
@@ -24,40 +26,8 @@ import { reportException } from "./report.js";
 // the start), then the composite. A game that draws from a timer and never asks for a frame is not composited until
 // something does.
 
-const CSS_LENGTH = /^\s*(-?\d+(?:\.\d+)?|-?\.\d+)\s*(px|%|vw|vh)?\s*$/i;
+export { boxOf };
 
-/// A CSS length the adapter can resolve: px (or a bare number), %, vw, vh. `basis` is what 100% is. `null` for
-/// anything else -- `auto`, `calc(...)`, an em -- which falls back to the default the caller gives.
-function cssLength(value, basis, innerWidth, innerHeight) {
-  if (value === undefined || value === null || value === "") return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  const match = CSS_LENGTH.exec(String(value));
-  if (!match) return null;
-  const n = Number(match[1]);
-  switch ((match[2] || "px").toLowerCase()) {
-    case "%": return (n / 100) * basis;
-    case "vw": return (n / 100) * innerWidth;
-    case "vh": return (n / 100) * innerHeight;
-    default: return n;
-  }
-}
-
-/// Where `canvas` is laid out, in CSS pixels of the window: its `style` width and height when they are set, else its
-/// own width and height (a canvas's intrinsic size is its backing size in CSS pixels), at its `left` / `top` plus its
-/// margins. The positioned, block-level box an engine gives its game canvas; nothing of a stylesheet, which the
-/// adapter does not read.
-export function boxOf(canvas, innerWidth, innerHeight) {
-  const style = canvas.style || {};
-  const length = (value, basis) => cssLength(value, basis, innerWidth, innerHeight);
-  const width = length(style.width, innerWidth) ?? canvas.width;
-  const height = length(style.height, innerHeight) ?? canvas.height;
-  const left = (length(style.left, innerWidth) ?? 0) + (length(style.marginLeft, innerWidth) ?? 0);
-  const top = (length(style.top, innerHeight) ?? 0) + (length(style.marginTop, innerWidth) ?? 0);
-  return { left, top, width, height };
-}
-
-const isCanvas = (node) => node !== null && typeof node === "object" && typeof node.getContext === "function"
-  && typeof node.width === "number" && typeof node.height === "number";
 
 function hidden(node) {
   const style = node.style;
@@ -157,6 +127,8 @@ export function installDisplay(win, document) {
     running = null;
     // The resize step comes after the frame's callbacks and before it is painted (resize-observer.js).
     deliverResizeObservations();
+    // Then whether observed elements are in the viewport (intersection-observer.js).
+    updateIntersectionObservations(time);
     try {
       composite();
     } catch (error) {
@@ -165,9 +137,11 @@ export function installDisplay(win, document) {
   };
 
   // A frame with no callbacks of its own, for a resize observation to be checked in.
-  setRenderingUpdate(() => {
+  const requestRenderingUpdate = () => {
     if (pending === null) pending = hostRequest.call(win, runFrame);
-  });
+  };
+  setRenderingUpdate(requestRenderingUpdate);
+  setIntersectionRenderingUpdate(requestRenderingUpdate);
 
   win.requestAnimationFrame = function requestAnimationFrame(callback) {
     if (typeof callback !== "function") {

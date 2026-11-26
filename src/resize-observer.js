@@ -3,26 +3,25 @@
 // before the frame is painted. Kaplay sizes its view from one on its canvas and Excalibur's screen watches its parent with
 // one; neither existed here, and both threw while starting.
 //
-// An element's size is its layout box as this document lays it out: getBoundingClientRect, which every element and canvas
-// here answers (no padding or border is modelled, so the content box is the border box). An observation starts from a
+// An element's size is its layout box as this document lays it out (layout.js's layoutBox: a canvas's CSS box, any other
+// element's getBoundingClientRect; no padding or border is modelled, so the content box is the border box). An observation starts from a
 // reported size of 0 x 0, as the specification's does, so an element with a size is reported at the next frame and one
 // without is reported when it gets one. Deliveries are one pass a frame: a size a callback changes is reported at the next.
 import { reportException } from "./report.js";
+import { layoutBox } from "./layout.js";
 
 const BOXES = ["content-box", "border-box", "device-pixel-content-box"];
 const active = new Set();
 let schedule = null;
 
 function sizeOf(target) {
-  let rect = null;
   try {
-    rect = typeof target.getBoundingClientRect === "function" ? target.getBoundingClientRect() : null;
+    const box = layoutBox(target);
+    return { width: box.width, height: box.height };
   } catch (error) {
     reportException(error);
+    return { width: 0, height: 0 };
   }
-  const width = rect && Number.isFinite(+rect.width) ? Math.max(0, +rect.width) : 0;
-  const height = rect && Number.isFinite(+rect.height) ? Math.max(0, +rect.height) : 0;
-  return { width, height };
 }
 
 const ratio = () => {

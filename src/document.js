@@ -103,6 +103,14 @@ const document = {
   // A game owns the whole window: it has focus while it is visible. p5.js calls this while it loads.
   hasFocus() { return this.visibilityState === "visible"; },
 
+  // Node.contains: the document is a node, and contains itself and everything in its tree. winit (the window layer of
+  // Bevy and every Rust game engine on the web) sizes its canvas only when `document.contains(canvas)`, and the call
+  // threw through the WebAssembly that made it.
+  contains(node) {
+    if (node === null || node === undefined) return false;
+    return node === this || documentElement === node || documentElement.contains(node);
+  },
+
   createTextNode(text) { return { nodeType: 3, textContent: String(text), nodeValue: String(text) }; },
 
   getElementById(id) {
