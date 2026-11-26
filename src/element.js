@@ -17,7 +17,7 @@ import { reportException } from "./report.js";
 // webpack/rollup emit (e.g. Phaser/Egret HTML output: an index.html whose only
 // job is `<script src="main.<hash>.js">`). A mini-game host has no HTML parser,
 // so nothing loads that chunk and the game never boots. Mini-game runtimes
-// (correctly, like WeChat) forbid loading REMOTE scripts, but a script that
+// (correctly, as the reference platform does) forbid loading REMOTE scripts, but a script that
 // points at a LOCAL file bundled inside the game package is safe: read it via
 // the host filesystem and execute it in global scope, then fire the element's
 // `load` event so the boot sequence continues. Remote (http/https) srcs are
