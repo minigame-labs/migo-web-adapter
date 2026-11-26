@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
-import EventTarget from "../src/event-target.js";
-import { Event } from "../src/events.js";
-import { AbortController } from "../src/abort.js";
+
+// What a listener throws is reported to the runtime's reportError, which src/report.js takes as it loads.
+const reported = [];
+globalThis.reportError = (error) => reported.push(error);
+const { default: EventTarget } = await import("../src/event-target.js");
+const { Event } = await import("../src/events.js");
+const { AbortController } = await import("../src/abort.js");
 
 const target = new EventTarget();
 const seen = [];
@@ -62,14 +66,12 @@ target.addEventListener("g", second);
 target.dispatchEvent({ type: "g" });
 assert.deepEqual(seen, ["first"]);
 
-// a throwing listener does not stop the others
+// a throwing listener does not stop the others, and what it threw is reported
 seen.length = 0;
-const quiet = console.error;
-console.error = () => {};
 target.addEventListener("h", () => { throw new Error("boom"); });
 target.addEventListener("h", () => seen.push("after"));
 target.dispatchEvent({ type: "h" });
-console.error = quiet;
 assert.deepEqual(seen, ["after"]);
+assert.deepEqual(reported.map((e) => e.message), ["boom"]);
 
 console.log("event-target tests: all passed");

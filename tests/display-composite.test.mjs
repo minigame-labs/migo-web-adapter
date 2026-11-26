@@ -7,6 +7,10 @@
 
 import assert from "node:assert/strict";
 
+// What the adapter reports goes to the runtime's reportError, which src/report.js takes as the adapter loads.
+const reported = [];
+globalThis.reportError = (error) => reported.push(error.message);
+
 const made = [];
 const frames = [];
 const draws = [];
@@ -82,8 +86,7 @@ screen.width = 1170; screen.height = 2532;   // 390 x 844 CSS pixels at 3x
   assert.throws(() => requestAnimationFrame(null), TypeError);
 
   // An exception in one callback does not stop the next.
-  const reported = [];
-  globalThis.reportError = (error) => reported.push(error.message);
+  reported.length = 0;
   const after = [];
   requestAnimationFrame(() => { throw new Error("boom"); });
   requestAnimationFrame(() => after.push("ran"));

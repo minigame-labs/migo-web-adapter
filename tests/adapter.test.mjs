@@ -102,7 +102,7 @@ globalThis.innerHeight = 844;
 // 4. navigator / location
 assert.equal(globalThis.navigator.platform, "android");
 assert.match(globalThis.navigator.userAgent, /Android/);
-assert.equal(globalThis.location.href, "game.js");
+assert.equal(globalThis.location.href, "https://game/game.js");
 
 // 5. document
 // The DOM lifecycle is deferred to a macrotask, so synchronously (before any

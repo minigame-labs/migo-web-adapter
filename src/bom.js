@@ -22,7 +22,7 @@ const _info = (() => {
 
 // Browser-faithful window metrics: LOGICAL/CSS innerWidth/Height plus the REAL
 // devicePixelRatio -- exactly what a real browser (the WebView baseline) reports
-// and what the canonical WeChat adapter exposes. A DPR-naive engine (Pixi/Phaser
+// and what the reference platform's canonical adapter exposes. A DPR-naive engine (Pixi/Phaser
 // created with resolution = 1) then renders into a logical-sized backing store,
 // identical to the WebView baseline: migo gives the presented canvas that logical
 // size until the content sizes it, and upscales it to the physical surface at swap

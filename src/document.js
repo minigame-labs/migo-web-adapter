@@ -38,6 +38,9 @@ const document = {
   location,
   // The game's origin root (origin.js): what a relative asset path is resolved against.
   baseURI: BASE_URI,
+  // The document's address: its location's (location.js), absolute, as a browser's is.
+  get URL() { return location.href; },
+  get documentURI() { return location.href; },
   // The document's FontFaceSet (font-face.js): PixiJS's web-font loader adds the faces it loads here.
   fonts: new FontFaceSet(),
   ontouchstart: null,
