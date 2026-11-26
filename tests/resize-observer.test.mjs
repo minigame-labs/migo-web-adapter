@@ -77,6 +77,22 @@ const o = new ResizeObserver(() => {});
 assert.throws(() => o.observe(null), TypeError);
 assert.throws(() => o.observe(box(1, 1), { box: "padding-box" }), TypeError);
 
+// A canvas is measured by its CSS box, not its drawing buffer: winit sizes its canvas `width: 100%` of the window and
+// waits to be told the box, while the buffer is still Bevy's default 1280 x 720.
+globalThis.innerWidth = 360;
+globalThis.innerHeight = 640;
+const gameCanvas = { width: 1280, height: 720, style: {}, getContext() {}, getBoundingClientRect() { return { width: 1280, height: 720 }; } };
+const boxes = [];
+const co = new ResizeObserver((entries) => boxes.push([entries[0].contentRect.width, entries[0].contentRect.height]));
+co.observe(gameCanvas);
+deliverResizeObservations();
+assert.deepEqual(boxes, [[1280, 720]], "a canvas with no CSS size is its own size");
+gameCanvas.style.width = "100%";
+gameCanvas.style.height = "100%";
+deliverResizeObservations();
+assert.deepEqual(boxes.at(-1), [360, 640], "a canvas sized 100% is the window's size");
+co.disconnect();
+
 // With no display a check is a task.
 setRenderingUpdate(null);
 const tasked = [];
