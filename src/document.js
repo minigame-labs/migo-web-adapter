@@ -79,9 +79,13 @@ const document = {
       // probe or a buffer -- Defold's loader checks for WebGL with one once its
       // assets have arrived -- and handed the screen it would hold the screen's
       // context, so the composite (display.js) could never show the page's
-      // canvas on it.
+      // canvas on it. And an onscreen canvas the page has sized itself
+      // (`canvas.width = ...`, which the runtime records) is the page's
+      // already: Kaplay, handed it as its `canvas`, sizes it and then makes its
+      // font cache's canvas before it asks for a context -- handed the screen,
+      // that 2D canvas left the engine none (`getContext('webgl')` was null).
       if (this._domReady && !this._mainCanvasRouted
-          && globalThis.canvas && !globalThis.canvas._context
+          && globalThis.canvas && !globalThis.canvas._context && !globalThis.canvas._sizedByContent
           && this.getElementsByTagName("canvas").length === 0) {
         this._mainCanvasRouted = true;
         return globalThis.canvas;

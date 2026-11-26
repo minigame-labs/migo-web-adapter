@@ -9,6 +9,7 @@ import { ClassList } from "./class-list.js";
 import { byTagName, byClassName, byId, queryAll, queryFirst, matches, closest } from "./query.js";
 import EventTarget from "./event-target.js";
 import DOMException from "./dom-exception.js";
+import { hostImages } from "./image-registry.js";
 import { withinPackage } from "./origin.js";
 import { parseHtmlFragment } from "./html-fragment.js";
 import { reportException } from "./report.js";
@@ -300,6 +301,17 @@ for (const [name, value] of Object.entries(insertAdjacentMembers)) {
 
 export class HTMLImageElement extends HTMLElement {
   constructor() { super("img"); }
+
+  // `new Image()` and `document.createElement('img')` hand out the runtime's host image (image.js), which is not in this
+  // class hierarchy; `instanceof HTMLImageElement` is how engines tell an image from a canvas or a bitmap.
+  static [Symbol.hasInstance](obj) {
+    if (obj == null || typeof obj !== "object") return false;
+    if (hostImages.has(obj)) return true;
+    for (let p = Object.getPrototypeOf(obj); p; p = Object.getPrototypeOf(p)) {
+      if (p === HTMLImageElement.prototype) return true;
+    }
+    return false;
+  }
 }
 
 export class HTMLCanvasElement extends HTMLElement {

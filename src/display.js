@@ -1,3 +1,4 @@
+import { deliverResizeObservations, setRenderingUpdate } from "./resize-observer.js";
 import { reportException } from "./report.js";
 
 // What the window shows: the canvases in the document.
@@ -154,12 +155,19 @@ export function installDisplay(win, document) {
       }
     }
     running = null;
+    // The resize step comes after the frame's callbacks and before it is painted (resize-observer.js).
+    deliverResizeObservations();
     try {
       composite();
     } catch (error) {
       reportException(error);
     }
   };
+
+  // A frame with no callbacks of its own, for a resize observation to be checked in.
+  setRenderingUpdate(() => {
+    if (pending === null) pending = hostRequest.call(win, runFrame);
+  });
 
   win.requestAnimationFrame = function requestAnimationFrame(callback) {
     if (typeof callback !== "function") {
