@@ -1,3 +1,5 @@
+import { reportException } from "./report.js";
+
 // What the window shows: the canvases in the document.
 //
 // A page shows every canvas it put in its document, laid out by CSS. Migo shows one canvas, the screen -- the first
@@ -88,10 +90,6 @@ function opacityOf(canvas) {
   return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 1;
 }
 
-function report(error) {
-  if (typeof globalThis.reportError === "function") globalThis.reportError(error);
-  else setTimeout(() => { throw error; }, 0);
-}
 
 /// Install the frame-callback runner and the composite. `win` is the global the page sees; `document` the adapter's.
 export function installDisplay(win, document) {
@@ -152,14 +150,14 @@ export function installDisplay(win, document) {
       try {
         callback(time);
       } catch (error) {
-        report(error);
+        reportException(error);
       }
     }
     running = null;
     try {
       composite();
     } catch (error) {
-      report(error);
+      reportException(error);
     }
   };
 

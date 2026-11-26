@@ -47,7 +47,9 @@ async function fetchSource(path) {
 //   - the input clock and the DOMException helper are dependency-free: the real files, fetched beside it;
 //   - the timers and the visibility observer are the engine's own scheduling, stood in for by the host's timers and a
 //     visibility switch this test flips;
-//   - `ext:core/ops` is the native op table: the one op the transport calls, recording what the motors were told.
+//   - `ext:core/ops` is the native op table: the one op the transport calls, recording what the motors were told;
+//   - the engine's async helpers, of which it calls one -- reportCallbackError, how the engine reports what a gamepad
+//     listener of its own threw -- stood in for by a recorder.
 const tmpDir = await mkdtemp(join(tmpdir(), "migo-gamepad-test-"));
 const realModules = {
   "ext:host_v8_touch/00_input_clock.js": ["00_input_clock.js", "input/00_input_clock.js"],
@@ -60,6 +62,8 @@ const standIns = {
     "export const observers = [];\nexport function _internalObserveVisibility(observer) { observers.push(observer); }\n"],
   "ext:core/ops": ["ops.js",
     "export const rumbles = [];\nexport function op_gamepad_rumble(...args) { rumbles.push(args); }\n"],
+  "ext:host_v8_base/02_async.js": ["async.js",
+    "export const reported = [];\nexport function reportCallbackError(label, error) { reported.push([label, error]); }\n"],
 };
 let gamepadSource = await fetchSource("input/04_gamepad.js");
 for (const [specifier, [file, path]] of Object.entries(realModules)) {
@@ -99,6 +103,10 @@ globalThis.migo = {
   onGamepadDisconnected: runtime.onGamepadDisconnected,
   offGamepadDisconnected: runtime.offGamepadDisconnected,
 };
+
+// What the adapter reports (src/report.js) goes to the runtime's reportError, which it takes as it loads.
+const _reports = [];
+globalThis.reportError = (error) => { _reports.push(error); };
 
 await import("../src/index.js");
 
@@ -217,7 +225,7 @@ globalThis.addEventListener("gamepaddisconnected", (e) => disconnectEvents.push(
 runtime._internalTriggerGamepadDisconnected(2);
 
 assert.deepEqual(survived, ["ran"], "a throwing listener does not stop the others");
-assert.ok(_errors.length > 0, "the failure was reported rather than swallowed");
+assert.ok(_reports.some((e) => e && e.message === "listener blew up"), "the failure was reported rather than swallowed");
 assert.equal(disconnectEvents.length, 1, "one gamepaddisconnected event");
 assert.equal(disconnectEvents[0].type, "gamepaddisconnected");
 assert.equal(disconnectEvents[0].gamepad, pad, "disconnect carries the pad that left");

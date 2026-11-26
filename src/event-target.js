@@ -1,3 +1,5 @@
+import { reportException } from "./report.js";
+
 // EventTarget — addEventListener / removeEventListener / dispatchEvent, with the parts of the options argument engines
 // use: `once` (Phaser's and three.js's one-shot listeners), `signal` (a listener that goes away with an AbortController),
 // listener objects with `handleEvent`, and `stopImmediatePropagation()` stopping the listeners after it. `capture` and
@@ -47,15 +49,10 @@ export default class EventTarget {
         if (typeof entry.listener === "function") entry.listener.call(this, event);
         else entry.listener.handleEvent(event);
       } catch (e) {
-        // Match browser behavior: a listener throwing must not stop others.
-        // Diagnostics are also untrusted embedder code. If console.error is
-        // replaced with a throwing function, that failure must not escape this
-        // catch block and abort the remaining listeners.
-        try {
-          if (typeof console !== "undefined" && console.error) console.error(e);
-        } catch {
-          // Reporting is best-effort; listener isolation is the contract.
-        }
+        // A listener throwing does not stop the others, and what it threw is reported (HTML's "report the
+        // exception"): the game's onError hears it, as a page's window.onerror would. It was only logged, so a game
+        // whose listener failed looked, to everything that watches for errors, like a game that had none.
+        reportException(e);
       }
       if (event._stopImmediate) break;
     }

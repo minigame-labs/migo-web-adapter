@@ -11,6 +11,7 @@ import EventTarget from "./event-target.js";
 import DOMException from "./dom-exception.js";
 import { withinPackage } from "./origin.js";
 import { parseHtmlFragment } from "./html-fragment.js";
+import { reportException } from "./report.js";
 
 // Browser boot pages commonly load the engine/game via a `<script src>` that
 // webpack/rollup emit (e.g. Phaser/Egret HTML output: an index.html whose only
@@ -22,35 +23,55 @@ import { parseHtmlFragment } from "./html-fragment.js";
 // `load` event so the boot sequence continues. Remote (http/https) srcs are
 // refused. This runs once per connected <script src>, deferred to a microtask
 // so an `onload` assigned right after `appendChild` is observed.
+//
+// As HTML runs a script element: a script that cannot be had fires `error` and runs nothing; one that runs and throws
+// has its exception reported, and its `load` still fires (the script was fetched and executed -- that is what `load`
+// says); an `onload` or `load` listener that throws is reported too. All three were one failure: a loader whose own
+// `onload` threw (a Unity build's, on a URL it could not make) was logged as a script that failed to load, its `error`
+// fired, and nothing that watches for errors heard of it.
 function maybeLoadScript(node) {
   if (!node || node.tagName !== "SCRIPT" || !node.src || node._migoLoaded) return;
   node._migoLoaded = true;
   Promise.resolve().then(() => {
     const src = withinPackage(String(node.src));
+    let code;
     try {
       if (/^(https?:)?\/\//i.test(src) || /^data:/i.test(src)) {
-        console.warn("[migo-web-adapter] refusing to load non-local script:", src);
-        if (typeof node.onerror === "function") node.onerror(new Error("non-local script blocked"));
-        node.dispatchEvent && node.dispatchEvent({ type: "error" });
-        return;
+        throw new Error("non-local script blocked");
       }
       const path = src.replace(/^\.?\//, "").split("?")[0].split("#")[0];
       const fs = typeof migo !== "undefined" && migo.getFileSystemManager && migo.getFileSystemManager();
       if (!fs || typeof fs.readFileSync !== "function") {
         throw new Error("no filesystem manager to read local script");
       }
-      const code = fs.readFileSync(path, "utf8");
+      code = fs.readFileSync(path, "utf8");
+    } catch (e) {
+      console.warn("[migo-web-adapter] the script " + src + " could not be loaded:", e);
+      fireScriptEvent(node, "error", e);
+      return;
+    }
+    try {
       // Indirect eval → global scope: webpack/engine bundles are top-level
       // IIFEs that install globals; they must not run in a nested lexical scope.
       (0, eval)(code);
-      if (typeof node.onload === "function") node.onload();
-      node.dispatchEvent && node.dispatchEvent({ type: "load" });
     } catch (e) {
-      console.error("[migo-web-adapter] local script load failed:", src, e);
-      if (typeof node.onerror === "function") node.onerror(e);
-      node.dispatchEvent && node.dispatchEvent({ type: "error" });
+      reportException(e);
     }
+    fireScriptEvent(node, "load");
   });
+}
+
+// The element's `on<type>` handler, then its listeners; whatever either throws is reported, and the rest still run.
+function fireScriptEvent(node, type, error) {
+  const handler = node["on" + type];
+  if (typeof handler === "function") {
+    try {
+      type === "error" ? handler.call(node, error) : handler.call(node);
+    } catch (e) {
+      reportException(e);
+    }
+  }
+  if (node.dispatchEvent) node.dispatchEvent({ type });
 }
 
 export class Node extends EventTarget {
