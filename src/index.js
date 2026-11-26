@@ -31,6 +31,8 @@ import Intl from "./intl.js";
 import DOMException from "./dom-exception.js";
 import { DOMParser, XMLSerializer } from "./dom-parser.js";
 import { ScreenOrientation } from "./screen-orientation.js";
+import { Window, adoptWindowPrototype } from "./window.js";
+import { ResizeObserver, ResizeObserverEntry, ResizeObserverSize, requestResizeCheck } from "./resize-observer.js";
 import {
   createIndexedDB, fileStorage, IDBFactory, IDBDatabase, IDBTransaction, IDBObjectStore, IDBIndex, IDBCursor,
   IDBCursorWithValue, IDBKeyRange, IDBRequest, IDBOpenDBRequest, IDBVersionChangeEvent, DOMStringList,
@@ -267,6 +269,9 @@ if (!globalThis.__migoWebAdapterInjected) {
     // no host sends the headers that would make SharedArrayBuffer a page's to use.
     isSecureContext: true, crossOriginIsolated: false,
     scrollTo() {}, scroll() {}, scrollBy() {},
+    // The game's window is the focused one while it is shown, so focusing it does nothing and so does blurring it
+    // (Excalibur focuses the window when it starts).
+    focus() {}, blur() {},
     getComputedStyle,
     // A touch host's window has the touch handlers, as `document` already does here (navigator.maxTouchPoints is 5):
     // `'ontouchstart' in window` is how engines tell a touch screen from a mouse.
@@ -304,7 +309,7 @@ if (!globalThis.__migoWebAdapterInjected) {
   // Worker: PixiJS v8 loads textures through one; three.js's and Babylon's decoders run in one (worker.js).
   // FontFace: PixiJS's web-font loader, and any game that loads a font the way a page does (font-face.js).
   // ReadableStream: a body read as it arrives, and a body made of one (Godot's loader, three.js's FileLoader; streams.js).
-  const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent, ScreenOrientation };
+  const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent, ScreenOrientation, ResizeObserver, ResizeObserverEntry, ResizeObserverSize };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }
@@ -357,7 +362,11 @@ if (!globalThis.__migoWebAdapterInjected) {
     }
   }
 
-  // 4. Window self-references that engines depend on.
+  // 4. Window self-references that engines depend on, and the global object a Window (window.js).
+  if (typeof globalThis.Window !== "function") {
+    globalThis.Window = Window;
+    adoptWindowPrototype(globalThis);
+  }
   if (!globalThis.window) globalThis.window = globalThis;
   if (!globalThis.self) globalThis.self = globalThis;
   if (!globalThis.parent) globalThis.parent = globalThis;
@@ -373,6 +382,8 @@ if (!globalThis.__migoWebAdapterInjected) {
   // 6. What the window shows: the canvases in the document (display.js). The page's frame callbacks run here, so the
   //    screen can show a canvas the engine put in the document once they have drawn.
   installDisplay(globalThis, document);
+  // A resize of the window is a size an observed element may have changed with (resize-observer.js).
+  globalThis.addEventListener("resize", requestResizeCheck);
 
   // 7. DOM lifecycle events. Browser-targeted engines commonly boot from
   //    `window.addEventListener('load', ...)` or `DOMContentLoaded` (e.g.
