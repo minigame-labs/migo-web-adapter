@@ -94,6 +94,8 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | XML | `DOMParser` 与 `XMLSerializer`,用于 XML(`text/xml`、`application/xml`、`application/xhtml+xml`、`image/svg+xml`):文档、带属性与命名空间的元素、文本、CDATA、注释与处理指令;格式不合法的文档返回 `<parsererror>` 根节点,与浏览器一致。`text/html` 被拒绝(`NotSupportedError`)。Egret 在加载时创建解析器并用它读取全部 XML 资源;Cocos 与 Laya 用同一对接口读取 `.fnt`、`.tmx` 与 `.plist` |
 | 网页字体 | `new FontFace(family, source, descriptors)`——`source` 是 CSS 的 `src` 列表(`url(...) format(...)`,按顺序尝试;`local(...)` 跳过)或字体字节——以及 `load()`、`loaded`、`status`;`document.fonts`(`FontFaceSet`:`add`、`delete`、`has`、`clear`、迭代、`load(font)`、`check(font)`、`ready`、`status`,`loading` / `loadingdone` / `loadingerror` 事件)。字体在加载时以其 family 经 `migo.loadFont` 注册(TTF、OTF、WOFF、WOFF2):包内 URL 直接按路径,网络、`data:`、`blob:` URL 或字节经临时文件。已加载的字体不论是否在 `document.fonts` 里都能用于绘制,`delete` 也不会注销它 |
 | 脚本与页面地址 | 包内的 `<script src>` 按 HTML 脚本元素的规则执行：读不到的触发 `error` 且不执行；执行时抛出的异常会上报，`load` 照常触发；处理函数或监听器抛出的异常也会上报。适配层里任何监听器抛出的异常都经运行时的 `reportError` 上报（游戏的 `onError` 能收到，相当于页面的 `window.onerror`），其后的监听器照常执行。`location.href` 与 `document.URL` 为绝对地址 `https://game/game.js` |
+| IndexedDB | `indexedDB`（带版本的 `open`、`upgradeneeded` 与 `blocked`、`deleteDatabase`、`databases`、`cmp`）以及 `IDBDatabase`、`IDBTransaction`、`IDBObjectStore`、`IDBIndex`（unique、multiEntry）、`IDBCursor` / `IDBCursorWithValue`（各方向、`continue`、`continuePrimaryKey`、`advance`、`update`、`delete`）、`IDBKeyRange`、`IDBRequest`、`IDBVersionChangeEvent`：值按结构化序列化保存（每次读取都是新副本），键按规范排序，支持键生成器，错误未被取消时中止事务并撤销其修改。每个数据库的事务按顺序逐个执行；事务在创建它的任务及其请求的事件中处于活动状态。数据库保存在游戏的用户数据目录（`<USER_DATA_PATH>/.indexeddb/`），每个修改过它的事务提交后写入并改名覆盖旧文件。Unity 构建把持久数据路径挂在它上面（emscripten 的 IDBFS），没有它会直接 abort |
+| 屏幕方向 | `screen.orientation` 是 `ScreenOrientation`：一个 `EventTarget`，`type` 跟随窗口，`angle` 相对设备的自然方向（手机和平板为竖屏、桌面为横屏），窗口转向时触发 `change`，`lock()` 为 `NotSupportedError`（锁定方向由平台负责，不由页面负责），`unlock()` 不做任何事 |
 | 流 | `ReadableStream`(默认 reader、底层源的 start / pull / cancel、`tee`、异步迭代)以及基于它的 `Response.body` / `Request.body`:边到达边读取的 body,和由流构成的 body(Godot 的 web 加载器、three.js 的 FileLoader);克隆流式 body 时做 tee。`ProgressEvent`。`isSecureContext` 为 true(页面源是 `https://game`),`crossOriginIsolated` 为 false |
 | Migo 的 V8 没有的标准全局 | `atob`、`btoa`(HTML 标准 base64,输入非法时抛 `InvalidCharacterError`)、`DOMException`(name、message、旧式 `code`)。宿主自带时不覆盖 |
 
@@ -168,6 +170,8 @@ src/
   navigator.js      navigator 桩实现
   location.js       页面地址（绝对地址，位于游戏的源上）
   report.js         HTML 的报告异常，经运行时的 reportError
+  screen-orientation.js  screen.orientation
+  idb/              IndexedDB：keys.js（键、键路径、键范围）、clone.js（结构化序列化）、api.js
   document.js       document 对象(createElement、getElementById 等)
   element.js        Node / Element / HTMLElement 及各标签对应的子类
   event-target.js   EventTarget 基类

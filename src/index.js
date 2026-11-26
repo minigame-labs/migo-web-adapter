@@ -30,6 +30,11 @@ import FileReader from "./file-reader.js";
 import Intl from "./intl.js";
 import DOMException from "./dom-exception.js";
 import { DOMParser, XMLSerializer } from "./dom-parser.js";
+import { ScreenOrientation } from "./screen-orientation.js";
+import {
+  createIndexedDB, fileStorage, IDBFactory, IDBDatabase, IDBTransaction, IDBObjectStore, IDBIndex, IDBCursor,
+  IDBCursorWithValue, IDBKeyRange, IDBRequest, IDBOpenDBRequest, IDBVersionChangeEvent, DOMStringList,
+} from "./idb/api.js";
 import { atob, btoa } from "./base64.js";
 import { TextEncoder, TextDecoder } from "./text-codec.js";
 import { Blob, File } from "./blob.js";
@@ -299,7 +304,7 @@ if (!globalThis.__migoWebAdapterInjected) {
   // Worker: PixiJS v8 loads textures through one; three.js's and Babylon's decoders run in one (worker.js).
   // FontFace: PixiJS's web-font loader, and any game that loads a font the way a page does (font-face.js).
   // ReadableStream: a body read as it arrives, and a body made of one (Godot's loader, three.js's FileLoader; streams.js).
-  const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent };
+  const standard = { CSSStyleDeclaration, TextEncoder, TextDecoder, Blob, File, AbortController, AbortSignal, Headers, Request, Response, fetch, DOMParser, XMLSerializer, Worker, FontFace, FontFaceSet, FontFaceSetLoadEvent, ReadableStream, ReadableStreamDefaultReader, ProgressEvent, ScreenOrientation };
   for (const name of Object.keys(standard)) {
     if (typeof globalThis[name] === "undefined") surface[name] = standard[name];
   }
@@ -321,6 +326,15 @@ if (!globalThis.__migoWebAdapterInjected) {
   // driver. Run on the runtime's ScriptProcessorNode (audio-worklet.js); AudioWorkletNode is the window global.
   const worklet = installAudioWorklet(globalThis);
   if (worklet.AudioWorkletNode && typeof globalThis.AudioWorkletNode === "undefined") surface.AudioWorkletNode = worklet.AudioWorkletNode;
+  // IndexedDB: a Unity build mounts its persistent data path on it (emscripten's IDBFS) and aborts without one; Godot,
+  // Construct and localForage keep saves there. Kept in the game's user data (idb/api.js).
+  if (typeof globalThis.indexedDB === "undefined") {
+    surface.indexedDB = createIndexedDB(fileStorage(globalThis.migo));
+    Object.assign(surface, {
+      IDBFactory, IDBDatabase, IDBTransaction, IDBObjectStore, IDBIndex, IDBCursor, IDBCursorWithValue, IDBKeyRange,
+      IDBRequest, IDBOpenDBRequest, IDBVersionChangeEvent, DOMStringList,
+    });
+  }
   // `URL.createObjectURL` throws in the runtime's URL; Phaser 3 loads all its images through it. And `createImageBitmap`
   // takes a Blob (Pixi: fetch -> blob -> createImageBitmap).
   installObjectURLs(globalThis.URL);

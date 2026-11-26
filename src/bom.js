@@ -1,3 +1,5 @@
+import { ScreenOrientation } from "./screen-orientation.js";
+
 // BOM window-metrics globals: innerWidth/innerHeight/outerWidth/outerHeight,
 // screenWidth/screenHeight, devicePixelRatio, and a screen object.
 //
@@ -54,5 +56,5 @@ export const screen = {
   availHeight: innerHeight,
   availLeft: 0,
   availTop: 0,
-  orientation: { angle: 0, type: innerWidth > innerHeight ? "landscape-primary" : "portrait-primary" },
+  orientation: new ScreenOrientation(),
 };

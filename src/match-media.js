@@ -13,6 +13,7 @@
 // preference for reduced motion or contrast, a full-screen display mode, eight bits per colour component.
 
 import EventTarget from "./event-target.js";
+import { reportException } from "./report.js";
 
 const LENGTH_UNITS = { px: 1, em: 16, rem: 16, in: 96, cm: 96 / 2.54, mm: 96 / 25.4, pt: 96 / 72, pc: 16, q: 96 / 101.6 };
 const RESOLUTION_UNITS = { dppx: 1, x: 1, dpi: 1 / 96, dpcm: 2.54 / 96 };
@@ -259,7 +260,7 @@ export class MediaQueryList extends EventTarget {
       if (now === this._last) return;
       this._last = now;
       const event = { type: "change", matches: now, media: this.media, target: this, currentTarget: this };
-      if (this._onchange) { try { this._onchange.call(this, event); } catch (error) { console.error(error); } }
+      if (this._onchange) { try { this._onchange.call(this, event); } catch (error) { reportException(error); } }
       this.dispatchEvent(event);
     });
   }
