@@ -95,7 +95,7 @@ game that *also* imports the ESM entry.
 | BOM scalars | `innerWidth`, `innerHeight`, `outerWidth`, `outerHeight`, `screenWidth`, `screenHeight`, `devicePixelRatio` |
 | BOM objects | `screen`, `navigator`, `location`, `document`, `localStorage` |
 | Window self-references | `window`, `self`, `parent`, `top`; the global object is a `Window` (`window instanceof Window`, an interface whose constructor throws), with `focus()` / `blur()` that do nothing: the game's window is the focused one |
-| Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `WheelEvent`, `KeyboardEvent`, `CompositionEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
+| Constructors / classes | `Image`, `Audio`, `XMLHttpRequest`, `WebSocket`, `FileReader`, `HTMLElement`, `Element`, `Node`, `Document`, `HTMLDocument` (the document is an `HTMLDocument`; `hidden` and `visibilityState` are getters of `Document.prototype`, as Ebitengine reads them), `EventTarget`, `Event`, `TouchEvent`, `MouseEvent`, `WheelEvent`, `KeyboardEvent`, `CompositionEvent`, `DeviceMotionEvent`, `GamepadEvent`, `HTMLImageElement`, `HTMLCanvasElement`, `HTMLAudioElement`, `HTMLMediaElement`, `HTMLVideoElement` |
 | On-screen canvas | `globalThis.canvas` (also `document.getElementById("GameCanvas")`) |
 | Audio element | `new Audio(src)` with `canPlayType` answering for what the runtime decodes (PCM WAV, MP3, Ogg Vorbis: `"probably"` / `"maybe"` / `""`), and a `play()` that returns a promise |
 | Video element | `document.createElement('video')` is an `HTMLVideoElement` with nothing to play it: `canPlayType` answers `""` for every type, a source fails with `MEDIA_ERR_SRC_NOT_SUPPORTED` (an `error` event after the assignment), and `play()` rejects with `NotSupportedError` -- what a browser says about a format it lacks |
@@ -226,6 +226,7 @@ tests/
   keyboard-events.test.mjs     physical keyboard -> DOM keydown/keyup forwarding
   composition-events.test.mjs  IME composition -> DOM compositionstart/update/end forwarding
   visibility-events.test.mjs   app lifecycle -> DOM Page Visibility (document.hidden, visibilitychange)
+  document-interface.test.mjs  Document / HTMLDocument: the document's interfaces, the visibility getters on Document.prototype
   dom-parser.test.mjs          XML trees, entities, namespaces, parsererror documents, serialization (cross-checked against jsdom)
 ```
 

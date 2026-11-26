@@ -85,7 +85,7 @@ RuntimeConfig config = new RuntimeConfig.Builder(context)
 | BOM 标量 | `innerWidth`、`innerHeight`、`outerWidth`、`outerHeight`、`screenWidth`、`screenHeight`、`devicePixelRatio` |
 | BOM 对象 | `screen`、`navigator`、`location`、`document`、`localStorage` |
 | Window 自引用 | `window`、`self`、`parent`、`top`；全局对象是一个 `Window`（`window instanceof Window` 为真；它是接口，构造函数会抛错），`focus()` / `blur()` 不做任何事：游戏窗口始终是聚焦的那个 |
-| 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`WheelEvent`、`KeyboardEvent`、`CompositionEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
+| 构造函数 / 类 | `Image`、`Audio`、`XMLHttpRequest`、`WebSocket`、`FileReader`、`HTMLElement`、`Element`、`Node`、`Document`、`HTMLDocument`（document 是一个 `HTMLDocument`；`hidden` 与 `visibilityState` 是 `Document.prototype` 上的 getter，Ebitengine 就这样读取它们）、`EventTarget`、`Event`、`TouchEvent`、`MouseEvent`、`WheelEvent`、`KeyboardEvent`、`CompositionEvent`、`DeviceMotionEvent`、`GamepadEvent`、`HTMLImageElement`、`HTMLCanvasElement`、`HTMLAudioElement`、`HTMLMediaElement`、`HTMLVideoElement` |
 | 屏上画布 | `globalThis.canvas`(也可通过 `document.getElementById("GameCanvas")` 获取) |
 | Audio 元素 | `new Audio(src)`;`canPlayType` 按运行时能解码的格式作答(PCM WAV、MP3、Ogg Vorbis:`"probably"` / `"maybe"` / `""`),`play()` 返回 promise |
 | 资源加载 | `XMLHttpRequest`(异步)与 `fetch` / `Headers` / `Request` / `Response`,支持三类 URL:网络(`migo.request`)、`data:` 与 `blob:`,以及**游戏包**——相对路径(`assets/a.json`、`./a.png?v=3`)或源相对路径(`/assets/a.json`)都读取包内文件,文件不存在是一次已完成的请求,状态 404。`Blob` / `File`、`URL.createObjectURL`(`Image` 可以加载它)、`createImageBitmap(blob)`、`FileReader`、`TextEncoder` / `TextDecoder`(UTF-8、UTF-16LE、windows-1252、GBK)、`AbortController` / `AbortSignal`;`EventTarget` 支持 `once`、`signal` 与 `handleEvent` 对象。`fetch` 的响应没有 `body` 流,流式读取的库据此得知只能整体读取 |
@@ -197,6 +197,7 @@ tests/
   keyboard-events.test.mjs     物理键盘 → DOM keydown/keyup 转发
   composition-events.test.mjs  IME 组合输入 → DOM compositionstart/update/end 转发
   visibility-events.test.mjs   应用生命周期 → DOM Page Visibility(document.hidden、visibilitychange)
+  document-interface.test.mjs  Document / HTMLDocument：document 的接口，Document.prototype 上的可见性 getter
 ```
 
 ## 运行测试
