@@ -4,7 +4,7 @@
 // null unless asking for the global canvas (engines do `getElementById('GameCanvas')`).
 
 import { CSSStyleDeclaration } from "./css-style.js";
-import HTMLElement, { HTMLVideoElement } from "./element.js";
+import HTMLElement, { HTMLVideoElement, Node } from "./element.js";
 import Image from "./image.js";
 import Canvas from "./canvas.js";
 import Audio from "./audio.js";
@@ -15,6 +15,48 @@ import { FontFaceSet } from "./font-face.js";
 import { byTagName, byClassName, byId, queryAll, queryFirst } from "./query.js";
 
 const _docTarget = new EventTarget();
+
+// The document's visibility state (Page Visibility): "visible" or "hidden". index.js sets it from the app's show and
+// hide, before it fires `visibilitychange`.
+let visibility = "visible";
+export function setDocumentVisibility(state) {
+  visibility = state === "hidden" ? "hidden" : "visible";
+}
+
+function requireDocument(value, member) {
+  if (value !== document) throw new TypeError(`Failed to read the '${member}' property from 'Document': Illegal invocation`);
+}
+
+// Document and HTMLDocument (DOM, HTML): the interfaces of `document`, which is an HTMLDocument. Content reads their
+// prototypes as well as the document itself: Ebitengine binds `Object.getOwnPropertyDescriptor(Document.prototype,
+// "hidden").get` to the document while its package initialises, and its Go panicked through syscall/js where there was no
+// Document. The page has the one document: a new one, which `new Document()` makes in a browser, is not supported here,
+// and HTMLDocument, as in a browser, has no constructor.
+export class Document extends Node {
+  constructor() {
+    throw new TypeError("Failed to construct 'Document': a document other than the page's is not supported here");
+  }
+
+  get hidden() {
+    requireDocument(this, "hidden");
+    return visibility === "hidden";
+  }
+
+  get visibilityState() {
+    requireDocument(this, "visibilityState");
+    return visibility;
+  }
+
+  // DOCUMENT_NODE.
+  get nodeType() { return 9; }
+  get nodeName() { return "#document"; }
+}
+
+export class HTMLDocument extends Document {
+  constructor() {
+    throw new TypeError("Illegal constructor");
+  }
+}
 
 // The page's element tree: <html> holding <head> and <body>. Engines measure
 // against it -- Phaser on iOS appends a 100vh probe to documentElement to read
@@ -32,8 +74,6 @@ const document = {
   // engines (Phaser, Egret, …) boot from those events, so they must fire.
   readyState: "loading",
   onreadystatechange: null,
-  visibilityState: "visible",
-  hidden: false,
   documentElement,
   location,
   // The game's origin root (origin.js): what a relative asset path is resolved against.
@@ -134,5 +174,8 @@ const document = {
   removeEventListener(type, listener) { _docTarget.removeEventListener(type, listener); },
   dispatchEvent(event) { return _docTarget.dispatchEvent(event); },
 };
+
+// An HTMLDocument, as the page's document is. Its own members above are the ones this adapter keeps per document.
+Object.setPrototypeOf(document, HTMLDocument.prototype);
 
 export default document;

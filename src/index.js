@@ -14,7 +14,7 @@ import * as bom from "./bom.js";
 import { getComputedStyle } from "./computed-style.js";
 import navigator from "./navigator.js";
 import location from "./location.js";
-import document from "./document.js";
+import document, { Document, HTMLDocument, setDocumentVisibility } from "./document.js";
 import HTMLElement, { Node, Element, HTMLImageElement, HTMLCanvasElement,
                        HTMLAudioElement, HTMLMediaElement, HTMLVideoElement } from "./element.js";
 import EventTarget from "./event-target.js";
@@ -235,8 +235,7 @@ if (!globalThis.__migoWebAdapterInjected) {
   // state and event. The state is set BEFORE dispatch so a handler reading
   // `document.hidden` sees the new value, as the spec requires.
   const _setVisibility = (hidden) => {
-    document.hidden = hidden;
-    document.visibilityState = hidden ? "hidden" : "visible";
+    setDocumentVisibility(hidden ? "hidden" : "visible");
     const ev = new Event("visibilitychange", { bubbles: true, cancelable: false });
     ev.target = document;
     document.dispatchEvent(ev);
@@ -282,7 +281,7 @@ if (!globalThis.__migoWebAdapterInjected) {
     // DOM
     document,
     // Constructors / classes
-    HTMLElement, Element, Node,
+    HTMLElement, Element, Node, Document, HTMLDocument,
     HTMLImageElement, HTMLCanvasElement, HTMLAudioElement,
     HTMLMediaElement, HTMLVideoElement,
     EventTarget, Event, Touch, TouchEvent, MouseEvent, PointerEvent, WheelEvent, KeyboardEvent, CompositionEvent, DeviceMotionEvent, GamepadEvent,
